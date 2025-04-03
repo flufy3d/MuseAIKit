@@ -1,6 +1,6 @@
 import * as path from 'path';
 
-import {baseConfig} from './es5.base.config';
+import { baseConfig } from './es5.base.config';
 
 module.exports = {
   ...baseConfig,
@@ -9,6 +9,6 @@ module.exports = {
     magentamusic: './src/lib.ts',
   },
   output:
-      {filename: 'magentamusic.js', path: path.resolve(__dirname, '../dist')},
-  optimization: {minimize: true},
+    { filename: 'museaikit.js', path: path.resolve(__dirname, '../dist') },
+  optimization: { minimize: true },
 };

@@ -1,7 +1,7 @@
 {
-  "name": "@magenta/music",
-  "version": "1.23.1",
-  "description": "Make music with machine learning, in the browser.",
+  "name": "museaikit",
+  "version": "1.0.0",
+  "description": "A powerful music-focused AI toolkit",
   "main": "es5/index.js",
   "module": "esm/index.js",
   "types": "esm/index.d.ts",
@@ -70,10 +70,10 @@
     "proto": "sh ./scripts/compile-proto.sh",
     "docs": "sh ../scripts/generate-docs.sh 'music'"
   },
-  "author": "Magenta",
+  "author": "flufy3d",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tensorflow/magenta-js.git"
+    "url": "https://github.com/flufy3d/MuseAIKit.git"
   }
 }
