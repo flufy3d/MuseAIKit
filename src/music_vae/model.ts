@@ -23,11 +23,11 @@
 import * as tf from '@tensorflow/tfjs';
 
 import * as chords from '../core/chords';
-import {fetch, performance} from '../core/compat/global';
+import { fetch, performance } from '../core/compat/global';
 import * as constants from '../core/constants';
 import * as data from '../core/data';
 import * as logging from '../core/logging';
-import {INoteSequence} from '../protobuf/index';
+import { INoteSequence } from '../protobuf/index';
 
 /**
  * A class for keeping track of the parameters of an affine transformation.
@@ -68,7 +68,7 @@ function dense(vars: LayerVars, inputs: tf.Tensor2D): tf.Tensor2D {
 abstract class Encoder {
   abstract readonly zDims: number;
   abstract encode(sequence: tf.Tensor3D, segmentLengths?: number[]):
-      tf.Tensor2D;
+    tf.Tensor2D;
 }
 
 /**
@@ -113,9 +113,9 @@ class BidirectionalLstm {
     ];
     const forgetBias = tf.scalar(1.0);
     const lstm = (data: tf.Tensor2D, state: [tf.Tensor2D, tf.Tensor2D]) =>
-        tf.basicLSTMCell(
-            forgetBias, lstmVars.kernel, lstmVars.bias, data, state[0],
-            state[1]);
+      tf.basicLSTMCell(
+        forgetBias, lstmVars.kernel, lstmVars.bias, data, state[0],
+        state[1]);
     const splitInputs = tf.split(inputs.toFloat(), length, 1);
     const outputStates: tf.Tensor2D[] = [];
     for (const data of (fw ? splitInputs : splitInputs.reverse())) {
@@ -146,7 +146,7 @@ class BidirectionalLstmEncoder extends Encoder {
    * `z`. The final states are returned directly if not provided.
    */
   constructor(
-      lstmFwVars: LayerVars, lstmBwVars: LayerVars, muVars?: LayerVars) {
+    lstmFwVars: LayerVars, lstmBwVars: LayerVars, muVars?: LayerVars) {
     super();
     this.bidirectionalLstm = new BidirectionalLstm(lstmFwVars, lstmBwVars);
     this.muVars = muVars;
@@ -168,7 +168,7 @@ class BidirectionalLstmEncoder extends Encoder {
     return tf.tidy(() => {
       const [fwStates, bwStates] = this.bidirectionalLstm.process(sequence);
       const finalState =
-          tf.concat([fwStates[fwStates.length - 1], bwStates[0]], 1);
+        tf.concat([fwStates[fwStates.length - 1], bwStates[0]], 1);
       if (this.muVars) {
         return dense(this.muVars, finalState);
       } else {
@@ -217,11 +217,11 @@ class HierarchicalEncoder extends Encoder {
     if (segmentLengths) {
       if (sequence.shape[0] !== 1) {
         throw new Error(
-            'When using variable-length segments, batch size must be 1.');
+          'When using variable-length segments, batch size must be 1.');
       }
       if (segmentLengths.length !== this.numSteps[0]) {
         throw new Error(
-            'Must provide length for all variable-length segments.');
+          'Must provide length for all variable-length segments.');
       }
     }
 
@@ -234,11 +234,11 @@ class HierarchicalEncoder extends Encoder {
         const embeddings: tf.Tensor2D[] = [];
         for (let step = 0; step < levelSteps; ++step) {
           embeddings.push(this.baseEncoders[level].encode(
-              (level === 0 && segmentLengths) ?
-                  tf.slice3d(
-                      splitInputs[step], [0, 0, 0],
-                      [1, segmentLengths[step], -1]) :
-                  splitInputs[step] as tf.Tensor3D));
+            (level === 0 && segmentLengths) ?
+              tf.slice3d(
+                splitInputs[step], [0, 0, 0],
+                [1, segmentLengths[step], -1]) :
+              splitInputs[step] as tf.Tensor3D));
         }
         inputs = tf.stack(embeddings, 1) as tf.Tensor3D;
       }
@@ -258,22 +258,22 @@ class HierarchicalEncoder extends Encoder {
  * @hidden
  */
 function initLstmCells(
-    z: tf.Tensor2D, lstmCellVars: LayerVars[], zToInitStateVars: LayerVars) {
+  z: tf.Tensor2D, lstmCellVars: LayerVars[], zToInitStateVars: LayerVars) {
   const lstmCells: tf.LSTMCellFunc[] = [];
   const c: tf.Tensor2D[] = [];
   const h: tf.Tensor2D[] = [];
   const initialStates: tf.Tensor2D[] =
-      tf.split(dense(zToInitStateVars, z).tanh(), 2 * lstmCellVars.length, 1);
+    tf.split(dense(zToInitStateVars, z).tanh(), 2 * lstmCellVars.length, 1);
   for (let i = 0; i < lstmCellVars.length; ++i) {
     const lv = lstmCellVars[i];
     const forgetBias = tf.scalar(1.0);
     lstmCells.push(
-        (data: tf.Tensor2D, c: tf.Tensor2D, h: tf.Tensor2D) =>
-            tf.basicLSTMCell(forgetBias, lv.kernel, lv.bias, data, c, h));
+      (data: tf.Tensor2D, c: tf.Tensor2D, h: tf.Tensor2D) =>
+        tf.basicLSTMCell(forgetBias, lv.kernel, lv.bias, data, c, h));
     c.push(initialStates[i * 2]);
     h.push(initialStates[i * 2 + 1]);
   }
-  return {'cell': lstmCells, 'c': c, 'h': h};
+  return { 'cell': lstmCells, 'c': c, 'h': h };
 }
 
 /**
@@ -284,8 +284,8 @@ abstract class Decoder {
   abstract readonly zDims: number;
 
   abstract decode(
-      z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
-      temperature?: number, controls?: tf.Tensor2D): tf.Tensor3D;
+    z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
+    temperature?: number, controls?: tf.Tensor2D): tf.Tensor3D;
 }
 
 /**
@@ -318,9 +318,9 @@ abstract class BaseDecoder extends Decoder {
    * direction of a bidirectional LSTM used to process the control tensors.
    */
   constructor(
-      lstmCellVars: LayerVars[], zToInitStateVars: LayerVars,
-      outputProjectVars: LayerVars, outputDims?: number,
-      controlLstmFwVars?: LayerVars, controlLstmBwVars?: LayerVars) {
+    lstmCellVars: LayerVars[], zToInitStateVars: LayerVars,
+    outputProjectVars: LayerVars, outputDims?: number,
+    controlLstmFwVars?: LayerVars, controlLstmBwVars?: LayerVars) {
     super();
     this.lstmCellVars = lstmCellVars;
     this.zToInitStateVars = zToInitStateVars;
@@ -329,7 +329,7 @@ abstract class BaseDecoder extends Decoder {
     this.outputDims = outputDims || outputProjectVars.bias.shape[0];
     if (controlLstmFwVars && controlLstmBwVars) {
       this.controlBidirectionalLstm =
-          new BidirectionalLstm(controlLstmFwVars, controlLstmBwVars);
+        new BidirectionalLstm(controlLstmFwVars, controlLstmBwVars);
     }
   }
 
@@ -341,7 +341,7 @@ abstract class BaseDecoder extends Decoder {
    * @returns The sampled output.
    */
   protected abstract sample(lstmOutput: tf.Tensor2D, temperature?: number):
-      tf.Tensor2D;
+    tf.Tensor2D;
 
   /**
    * Decodes a batch of latent vectors, `z`.
@@ -365,45 +365,45 @@ abstract class BaseDecoder extends Decoder {
    * `[batchSize, length, depth]`.
    */
   decode(
-      z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
-      temperature?: number, controls?: tf.Tensor2D) {
+    z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
+    temperature?: number, controls?: tf.Tensor2D) {
     const batchSize = z.shape[0];
 
     return tf.tidy(() => {
       // Initialize LSTMCells.
       const lstmCell =
-          initLstmCells(z, this.lstmCellVars, this.zToInitStateVars);
+        initLstmCells(z, this.lstmCellVars, this.zToInitStateVars);
 
       // Add batch dimension to controls.
       let expandedControls: tf.Tensor3D =
-          controls ? tf.expandDims(controls, 0) : undefined;
+        controls ? tf.expandDims(controls, 0) : undefined;
 
       // Generate samples.
       const samples: tf.Tensor2D[] = [];
       let nextInput = initialInput ?
-          initialInput :
-          tf.zeros([batchSize, this.outputDims]) as tf.Tensor2D;
+        initialInput :
+        tf.zeros([batchSize, this.outputDims]) as tf.Tensor2D;
       if (this.controlBidirectionalLstm) {
         // Preprocess the controls with a bidirectional LSTM.
         const [fwStates, bwStates] =
-            this.controlBidirectionalLstm.process(expandedControls);
+          this.controlBidirectionalLstm.process(expandedControls);
         expandedControls =
-            tf.concat([tf.stack(fwStates, 1), tf.stack(bwStates, 1)], 2) as
-            tf.Tensor3D;
+          tf.concat([tf.stack(fwStates, 1), tf.stack(bwStates, 1)], 2) as
+          tf.Tensor3D;
       }
       const splitControls = expandedControls ?
-          tf.split(
-              tf.tile(expandedControls, [batchSize, 1, 1]), controls.shape[0],
-              1) :
-          undefined;
+        tf.split(
+          tf.tile(expandedControls, [batchSize, 1, 1]), controls.shape[0],
+          1) :
+        undefined;
       for (let i = 0; i < length; ++i) {
         const toConcat = splitControls ?
-            [nextInput, z, tf.squeeze(splitControls[i], [1]) as tf.Tensor2D] :
-            [nextInput, z];
+          [nextInput, z, tf.squeeze(splitControls[i], [1]) as tf.Tensor2D] :
+          [nextInput, z];
         [lstmCell.c, lstmCell.h] = tf.multiRNNCell(
-            lstmCell.cell, tf.concat(toConcat, 1), lstmCell.c, lstmCell.h);
+          lstmCell.cell, tf.concat(toConcat, 1), lstmCell.c, lstmCell.h);
         const lstmOutput =
-            dense(this.outputProjectVars, lstmCell.h[lstmCell.h.length - 1]);
+          dense(this.outputProjectVars, lstmCell.h[lstmCell.h.length - 1]);
         nextInput = this.sample(lstmOutput, temperature);
         samples.push(nextInput);
       }
@@ -423,12 +423,12 @@ class BooleanDecoder extends BaseDecoder {
   sample(lstmOutput: tf.Tensor2D, temperature?: number): tf.Tensor2D {
     const logits = lstmOutput;
     return (temperature ?
-                tf.greaterEqual(
-                    tf.sigmoid(
-                        logits.div(tf.scalar(temperature)) as tf.Tensor2D),
-                    tf.randomUniform(logits.shape)) :
-                tf.greaterEqual(logits, 0))
-               .toFloat() as tf.Tensor2D;
+      tf.greaterEqual(
+        tf.sigmoid(
+          logits.div(tf.scalar(temperature)) as tf.Tensor2D),
+        tf.randomUniform(logits.shape)) :
+      tf.greaterEqual(logits, 0))
+      .toFloat() as tf.Tensor2D;
   }
 }
 
@@ -441,11 +441,11 @@ class CategoricalDecoder extends BaseDecoder {
   sample(lstmOutput: tf.Tensor2D, temperature?: number): tf.Tensor2D {
     const logits = lstmOutput;
     const timeLabels =
-        (temperature ?
-             tf.multinomial(
-                   logits.div(tf.scalar(temperature)) as tf.Tensor2D, 1)
-                 .as1D() :
-             logits.argMax(1).as1D());
+      (temperature ?
+        tf.multinomial(
+          logits.div(tf.scalar(temperature)) as tf.Tensor2D, 1)
+          .as1D() :
+        logits.argMax(1).as1D());
     return tf.oneHot(timeLabels, this.outputDims).toFloat() as tf.Tensor2D;
   }
 }
@@ -459,18 +459,18 @@ class NadeDecoder extends BaseDecoder {
   private nade: Nade;
 
   constructor(
-      lstmCellVars: LayerVars[], zToInitStateVars: LayerVars,
-      outputProjectVars: LayerVars, nade: Nade, controlLstmFwVars?: LayerVars,
-      controlLstmBwVars?: LayerVars) {
+    lstmCellVars: LayerVars[], zToInitStateVars: LayerVars,
+    outputProjectVars: LayerVars, nade: Nade, controlLstmFwVars?: LayerVars,
+    controlLstmBwVars?: LayerVars) {
     super(
-        lstmCellVars, zToInitStateVars, outputProjectVars, nade.numDims,
-        controlLstmFwVars, controlLstmBwVars);
+      lstmCellVars, zToInitStateVars, outputProjectVars, nade.numDims,
+      controlLstmFwVars, controlLstmBwVars);
     this.nade = nade;
   }
 
   sample(lstmOutput: tf.Tensor2D, temperature?: number): tf.Tensor2D {
     const [encBias, decBias] =
-        tf.split(lstmOutput, [this.nade.numHidden, this.nade.numDims], 1);
+      tf.split(lstmOutput, [this.nade.numHidden, this.nade.numDims], 1);
     return this.nade.sample(encBias as tf.Tensor2D, decBias as tf.Tensor2D);
   }
 }
@@ -494,7 +494,7 @@ class GrooveDecoder extends BaseDecoder {
       hits = tf.greater(tf.sigmoid(hits), 0.5).toFloat() as tf.Tensor2D;
     }
 
-    return tf.concat([hits, velocities, offsets], 1);
+    return tf.concat([hits, velocities, offsets], 1) as tf.Tensor2D;
   }
 }
 
@@ -519,16 +519,16 @@ class SplitDecoder extends Decoder {
     this.numDecoders = this.coreDecoders.length;
     this.zDims = this.coreDecoders[0].zDims;
     this.outputDims =
-        this.coreDecoders.reduce((dims, dec) => dims + dec.outputDims, 0);
+      this.coreDecoders.reduce((dims, dec) => dims + dec.outputDims, 0);
   }
 
   decodeSeparately(
-      z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D[],
-      temperature?: number, controls?: tf.Tensor2D): tf.Tensor3D[] {
+    z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D[],
+    temperature?: number, controls?: tf.Tensor2D): tf.Tensor3D[] {
     const samples: tf.Tensor3D[] = [];
     for (let i = 0; i < this.coreDecoders.length; ++i) {
       samples.push(this.coreDecoders[i].decode(
-          z, length, initialInput[i], temperature, controls));
+        z, length, initialInput[i], temperature, controls));
     }
     return samples;
   }
@@ -547,12 +547,12 @@ class SplitDecoder extends Decoder {
    * `[batchSize, length, depth]`.
    */
   decode(
-      z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
-      temperature?: number, controls?: tf.Tensor2D) {
+    z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
+    temperature?: number, controls?: tf.Tensor2D) {
     return tf.tidy(() => {
       const samples: tf.Tensor3D[] = this.decodeSeparately(
-          z, length, this.coreDecoders.map(_ => initialInput), temperature,
-          controls);
+        z, length, this.coreDecoders.map(_ => initialInput), temperature,
+        controls);
       return tf.concat(samples, -1);
     });
   }
@@ -583,8 +583,8 @@ class ConductorDecoder extends Decoder {
    * produce and pass to the lower-level decoder.
    */
   constructor(
-      coreDecoders: Decoder[], lstmCellVars: LayerVars[],
-      zToInitStateVars: LayerVars, numSteps: number) {
+    coreDecoders: Decoder[], lstmCellVars: LayerVars[],
+    zToInitStateVars: LayerVars, numSteps: number) {
     super();
     this.splitDecoder = new SplitDecoder(coreDecoders);
     this.lstmCellVars = lstmCellVars;
@@ -608,36 +608,36 @@ class ConductorDecoder extends Decoder {
    * `[batchSize, length, depth]`.
    */
   decode(
-      z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
-      temperature?: number, controls?: tf.Tensor2D) {
+    z: tf.Tensor2D, length: number, initialInput?: tf.Tensor2D,
+    temperature?: number, controls?: tf.Tensor2D) {
     const batchSize = z.shape[0];
 
     return tf.tidy(() => {
       // Initialize LSTMCells.
       const lstmCell =
-          initLstmCells(z, this.lstmCellVars, this.zToInitStateVars);
+        initLstmCells(z, this.lstmCellVars, this.zToInitStateVars);
 
       // Generate embeddings.
       const samples: tf.Tensor3D[] = [];
       let initialInput: tf.Tensor2D[] =
-          new Array(this.splitDecoder.numDecoders).fill(undefined);
+        new Array(this.splitDecoder.numDecoders).fill(undefined);
       const dummyInput: tf.Tensor2D = tf.zeros([batchSize, 1]);
       const splitControls: tf.Tensor2D[] | undefined =
-          controls ? tf.split(controls, this.numSteps) : undefined;
+        controls ? tf.split(controls, this.numSteps) : undefined;
       for (let i = 0; i < this.numSteps; ++i) {
         [lstmCell.c, lstmCell.h] =
-            tf.multiRNNCell(lstmCell.cell, dummyInput, lstmCell.c, lstmCell.h);
+          tf.multiRNNCell(lstmCell.cell, dummyInput, lstmCell.c, lstmCell.h);
         const currSamples = this.splitDecoder.decodeSeparately(
-            lstmCell.h[lstmCell.h.length - 1], length / this.numSteps,
-            initialInput, temperature,
-            splitControls ? splitControls[i] : undefined);
+          lstmCell.h[lstmCell.h.length - 1], length / this.numSteps,
+          initialInput, temperature,
+          splitControls ? splitControls[i] : undefined);
         samples.push(tf.concat(currSamples, -1));
         initialInput = currSamples.map(
-            s => s.slice(
-                      [0, s.shape[1] - 1, 0],
-                      [batchSize, 1, s.shape[s.rank - 1]])
-                     .squeeze([1])
-                     .toFloat() as tf.Tensor2D);
+          s => s.slice(
+            [0, s.shape[1] - 1, 0],
+            [batchSize, 1, s.shape[s.rank - 1]])
+            .squeeze([1])
+            .toFloat() as tf.Tensor2D);
       }
       return tf.concat(samples, 1);
     });
@@ -688,16 +688,16 @@ class Nade {
       for (let i = 0; i < this.numDims; i++) {
         const h = tf.sigmoid(a);
         const encWeightsI =
-            this.encWeights.slice([i, 0], [1, this.numHidden]).as1D();
+          this.encWeights.slice([i, 0], [1, this.numHidden]).as1D();
         const decWeightsTI =
-            this.decWeightsT.slice([i, 0], [1, this.numHidden]);
+          this.decWeightsT.slice([i, 0], [1, this.numHidden]);
         const decBiasI = decBias.slice([0, i], [batchSize, 1]);
         const contfogitsI =
-            decBiasI.add(tf.matMul(h, decWeightsTI, false, true));
+          decBiasI.add(tf.matMul(h, decWeightsTI, false, true));
         const condProbsI = contfogitsI.sigmoid();
 
         const samplesI =
-            condProbsI.greaterEqual(tf.scalar(0.5)).toFloat().as1D();
+          condProbsI.greaterEqual(tf.scalar(0.5)).toFloat().as1D();
         if (i < this.numDims - 1) {
           a = a.add(tf.outerProduct(samplesI.toFloat(), encWeightsI));
         }
@@ -756,7 +756,7 @@ export interface MusicVAESpec {
 export interface MusicVAEControlArgs {
   chordProgression?: string[];
   key?: number;
-  extraControls?: {[name: string]: tf.Tensor2D};
+  extraControls?: { [name: string]: tf.Tensor2D };
 }
 
 /**
@@ -777,7 +777,7 @@ class MusicVAE {
 
   private encoder: Encoder;
   private decoder: Decoder;
-  private rawVars: {[varName: string]: tf.Tensor};  // Store for disposal.
+  private rawVars: { [varName: string]: tf.Tensor };  // Store for disposal.
 
   public zDims: number;
 
@@ -802,8 +802,8 @@ class MusicVAE {
   private instantiateFromSpec() {
     this.dataConverter = data.converterFromSpec(this.spec.dataConverter);
     this.chordEncoder = this.spec.chordEncoder ?
-        chords.chordEncoderFromType(this.spec.chordEncoder) :
-        undefined;
+      chords.chordEncoderFromType(this.spec.chordEncoder) :
+      undefined;
   }
 
   /**
@@ -819,7 +819,7 @@ class MusicVAE {
   }
 
   private getLstmLayers(
-      cellFormat: string, vars: {[varName: string]: tf.Tensor}) {
+    cellFormat: string, vars: { [varName: string]: tf.Tensor }) {
     const lstmLayers: LayerVars[] = [];
     let l = 0;
     while (true) {
@@ -828,8 +828,8 @@ class MusicVAE {
         break;
       }
       lstmLayers.push(new LayerVars(
-          vars[cellPrefix + 'kernel'] as tf.Tensor2D,
-          vars[cellPrefix + 'bias'] as tf.Tensor1D));
+        vars[cellPrefix + 'kernel'] as tf.Tensor2D,
+        vars[cellPrefix + 'bias'] as tf.Tensor1D));
       ++l;
     }
     return lstmLayers;
@@ -845,15 +845,15 @@ class MusicVAE {
 
     if (!this.spec) {
       await fetch(`${this.checkpointURL}/config.json`)
-          .then((response) => response.json())
-          .then((spec) => {
-            if (spec.type !== 'MusicVAE') {
-              throw new Error(
-                  `Attempted to instantiate MusicVAE model with incorrect type:
+        .then((response) => response.json())
+        .then((spec) => {
+          if (spec.type !== 'MusicVAE') {
+            throw new Error(
+              `Attempted to instantiate MusicVAE model with incorrect type:
                   ${spec.type}`);
-            }
-            this.spec = spec;
-          });
+          }
+          this.spec = spec;
+        });
     }
 
     this.instantiateFromSpec();
@@ -862,64 +862,63 @@ class MusicVAE {
     const MUTLI_LSTM_CELL_FORMAT = `multi_rnn_cell/${LSTM_CELL_FORMAT}`;
     const CONDUCTOR_PREFIX = 'decoder/hierarchical_level_0/';
     const BIDI_LSTM_CELL =
-        'cell_%d/bidirectional_rnn/%s/multi_rnn_cell/cell_0/lstm_cell/';
+      'cell_%d/bidirectional_rnn/%s/multi_rnn_cell/cell_0/lstm_cell/';
     const ENCODER_FORMAT = `encoder/${BIDI_LSTM_CELL}`;
     const HIER_ENCODER_FORMAT =
-        `encoder/hierarchical_level_%d/${BIDI_LSTM_CELL.replace('%d', '0')}`;
+      `encoder/hierarchical_level_%d/${BIDI_LSTM_CELL.replace('%d', '0')}`;
     const CONTROL_BIDI_LSTM_CELL = `control_preprocessing/${BIDI_LSTM_CELL}`;
 
     const vars = await fetch(`${this.checkpointURL}/weights_manifest.json`)
-                     .then((response) => response.json())
-                     .then(
-                         (manifest: tf.io.WeightsManifestConfig) =>
-                             tf.io.loadWeights(manifest, this.checkpointURL));
+      .then((response) => response.json())
+      .then(
+        (manifest: tf.io.WeightsManifestConfig) =>
+          tf.io.loadWeights(manifest, this.checkpointURL));
     this.rawVars = vars;  // Save for disposal.
 
     // Encoder variables.
     const encMu = new LayerVars(
-        vars['encoder/mu/kernel'] as tf.Tensor2D,
-        vars['encoder/mu/bias'] as tf.Tensor1D);
+      vars['encoder/mu/kernel'] as tf.Tensor2D,
+      vars['encoder/mu/bias'] as tf.Tensor1D);
 
     if (this.dataConverter.numSegments) {
       const fwLayers =
-          this.getLstmLayers(HIER_ENCODER_FORMAT.replace('%s', 'fw'), vars);
+        this.getLstmLayers(HIER_ENCODER_FORMAT.replace('%s', 'fw'), vars);
       const bwLayers =
-          this.getLstmLayers(HIER_ENCODER_FORMAT.replace('%s', 'bw'), vars);
+        this.getLstmLayers(HIER_ENCODER_FORMAT.replace('%s', 'bw'), vars);
 
       if (fwLayers.length !== bwLayers.length || fwLayers.length !== 2) {
         throw Error(
-            'Only 2 hierarchical encoder levels are supported. ' +
-            `Got ${fwLayers.length} forward and ${bwLayers.length} ` +
-            'backward.');
+          'Only 2 hierarchical encoder levels are supported. ' +
+          `Got ${fwLayers.length} forward and ${bwLayers.length} ` +
+          'backward.');
       }
       const baseEncoders: BidirectionalLstmEncoder[] = [0, 1].map(
-          l => new BidirectionalLstmEncoder(fwLayers[l], bwLayers[l]));
+        l => new BidirectionalLstmEncoder(fwLayers[l], bwLayers[l]));
       this.encoder = new HierarchicalEncoder(
-          baseEncoders, [this.dataConverter.numSegments, 1], encMu);
+        baseEncoders, [this.dataConverter.numSegments, 1], encMu);
 
     } else {
       const fwLayers =
-          this.getLstmLayers(ENCODER_FORMAT.replace('%s', 'fw'), vars);
+        this.getLstmLayers(ENCODER_FORMAT.replace('%s', 'fw'), vars);
       const bwLayers =
-          this.getLstmLayers(ENCODER_FORMAT.replace('%s', 'bw'), vars);
+        this.getLstmLayers(ENCODER_FORMAT.replace('%s', 'bw'), vars);
       if (fwLayers.length !== bwLayers.length || fwLayers.length !== 1) {
         throw Error(
-            'Only single-layer bidirectional encoders are supported. ' +
-            `Got ${fwLayers.length} forward and ${bwLayers.length} ` +
-            'backward.');
+          'Only single-layer bidirectional encoders are supported. ' +
+          `Got ${fwLayers.length} forward and ${bwLayers.length} ` +
+          'backward.');
       }
       this.encoder =
-          new BidirectionalLstmEncoder(fwLayers[0], bwLayers[0], encMu);
+        new BidirectionalLstmEncoder(fwLayers[0], bwLayers[0], encMu);
     }
 
     // Whether or not we have variables for bidirectional control preprocessing.
-    const hasControlBidiLayers = `${
-                                     CONTROL_BIDI_LSTM_CELL.replace('%s', 'fw')
-                                         .replace('%d', '0')}kernel` in vars;
+    const hasControlBidiLayers = `${CONTROL_BIDI_LSTM_CELL.replace('%s', 'fw')
+        .replace('%d', '0')}kernel` in vars;
 
     // BaseDecoder variables.
     const decVarPrefix =
-        (this.dataConverter.numSegments) ? 'core_decoder/' : '';
+      (this.dataConverter.numSegments) ? 'core_decoder/' : '';
 
     const decVarPrefixes: string[] = [];
     if (this.dataConverter.NUM_SPLITS) {
@@ -934,63 +933,62 @@ class MusicVAE {
     let controlLstmBwLayers: LayerVars[] = [null];
     if (hasControlBidiLayers) {
       controlLstmFwLayers =
-          this.getLstmLayers(CONTROL_BIDI_LSTM_CELL.replace('%s', 'fw'), vars);
+        this.getLstmLayers(CONTROL_BIDI_LSTM_CELL.replace('%s', 'fw'), vars);
       controlLstmBwLayers =
-          this.getLstmLayers(CONTROL_BIDI_LSTM_CELL.replace('%s', 'bw'), vars);
+        this.getLstmLayers(CONTROL_BIDI_LSTM_CELL.replace('%s', 'bw'), vars);
       if (controlLstmFwLayers.length !== controlLstmBwLayers.length ||
-          controlLstmFwLayers.length !== 1) {
+        controlLstmFwLayers.length !== 1) {
         throw Error(
-            'Only single-layer bidirectional control preprocessing is ' +
-            'supported. Got ' +
-            `${controlLstmFwLayers.length} forward and ${
-                controlLstmBwLayers.length} backward.`);
+          'Only single-layer bidirectional control preprocessing is ' +
+          'supported. Got ' +
+          `${controlLstmFwLayers.length} forward and ${controlLstmBwLayers.length} backward.`);
       }
     }
 
     const baseDecoders = decVarPrefixes.map((varPrefix) => {
       const decLstmLayers =
-          this.getLstmLayers(varPrefix + MUTLI_LSTM_CELL_FORMAT, vars);
+        this.getLstmLayers(varPrefix + MUTLI_LSTM_CELL_FORMAT, vars);
       const decZtoInitState = new LayerVars(
-          vars[`${varPrefix}z_to_initial_state/kernel`] as tf.Tensor2D,
-          vars[`${varPrefix}z_to_initial_state/bias`] as tf.Tensor1D);
+        vars[`${varPrefix}z_to_initial_state/kernel`] as tf.Tensor2D,
+        vars[`${varPrefix}z_to_initial_state/bias`] as tf.Tensor1D);
       const decOutputProjection = new LayerVars(
-          vars[`${varPrefix}output_projection/kernel`] as tf.Tensor2D,
-          vars[`${varPrefix}output_projection/bias`] as tf.Tensor1D);
+        vars[`${varPrefix}output_projection/kernel`] as tf.Tensor2D,
+        vars[`${varPrefix}output_projection/bias`] as tf.Tensor1D);
 
       if (`${varPrefix}nade/w_enc` in vars) {
         return new NadeDecoder(
-                   decLstmLayers, decZtoInitState, decOutputProjection,
-                   new Nade(
-                       vars[`${varPrefix}nade/w_enc`] as tf.Tensor3D,
-                       vars[`${varPrefix}nade/w_dec_t`] as tf.Tensor3D),
-                   controlLstmFwLayers[0], controlLstmBwLayers[0]) as Decoder;
+          decLstmLayers, decZtoInitState, decOutputProjection,
+          new Nade(
+            vars[`${varPrefix}nade/w_enc`] as tf.Tensor3D,
+            vars[`${varPrefix}nade/w_dec_t`] as tf.Tensor3D),
+          controlLstmFwLayers[0], controlLstmBwLayers[0]) as Decoder;
       } else if (this.spec.dataConverter.type === 'GrooveConverter') {
         return new GrooveDecoder(
-                   decLstmLayers, decZtoInitState, decOutputProjection,
-                   undefined, controlLstmFwLayers[0], controlLstmBwLayers[0]) as
-            Decoder;
+          decLstmLayers, decZtoInitState, decOutputProjection,
+          undefined, controlLstmFwLayers[0], controlLstmBwLayers[0]) as
+          Decoder;
       } else if (this.spec.useBooleanDecoder) {
         return new BooleanDecoder(
-            decLstmLayers, decZtoInitState, decOutputProjection, undefined,
-            controlLstmFwLayers[0], controlLstmBwLayers[0]);
+          decLstmLayers, decZtoInitState, decOutputProjection, undefined,
+          controlLstmFwLayers[0], controlLstmBwLayers[0]);
       } else {
         return new CategoricalDecoder(
-                   decLstmLayers, decZtoInitState, decOutputProjection,
-                   undefined, controlLstmFwLayers[0], controlLstmBwLayers[0]) as
-            Decoder;
+          decLstmLayers, decZtoInitState, decOutputProjection,
+          undefined, controlLstmFwLayers[0], controlLstmBwLayers[0]) as
+          Decoder;
       }
     });
 
     // ConductorDecoder variables.
     if (this.dataConverter.numSegments) {
       const condLstmLayers =
-          this.getLstmLayers(CONDUCTOR_PREFIX + LSTM_CELL_FORMAT, vars);
+        this.getLstmLayers(CONDUCTOR_PREFIX + LSTM_CELL_FORMAT, vars);
       const condZtoInitState = new LayerVars(
-          vars[`${CONDUCTOR_PREFIX}initial_state/kernel`] as tf.Tensor2D,
-          vars[`${CONDUCTOR_PREFIX}initial_state/bias`] as tf.Tensor1D);
+        vars[`${CONDUCTOR_PREFIX}initial_state/kernel`] as tf.Tensor2D,
+        vars[`${CONDUCTOR_PREFIX}initial_state/bias`] as tf.Tensor1D);
       this.decoder = new ConductorDecoder(
-          baseDecoders, condLstmLayers, condZtoInitState,
-          this.dataConverter.numSegments);
+        baseDecoders, condLstmLayers, condZtoInitState,
+        this.dataConverter.numSegments);
     } else if (baseDecoders.length === 1) {
       this.decoder = baseDecoders[0];
     } else {
@@ -1024,9 +1022,9 @@ class MusicVAE {
       throw new Error('Unexpected chord progression provided.');
     }
     if (this.chordEncoder && this.dataConverter.endTensor &&
-        controlArgs.chordProgression.length > 1) {
+      controlArgs.chordProgression.length > 1) {
       throw new Error(
-          'Multiple chords not supported when using variable-length segments.');
+        'Multiple chords not supported when using variable-length segments.');
     }
 
     if (this.spec.conditionOnKey && controlArgs.key == null) {
@@ -1043,9 +1041,7 @@ class MusicVAE {
         if (controlSpec.name in extraControls) {
           if (extraControls[controlSpec.name].shape[1] !== controlSpec.depth) {
             throw new Error(
-                `Control signal ${controlSpec.name} has invalid depth: ${
-                    extraControls[controlSpec.name].shape[1]} != ${
-                    controlSpec.depth}`);
+              `Control signal ${controlSpec.name} has invalid depth: ${extraControls[controlSpec.name].shape[1]} != ${controlSpec.depth}`);
           }
         } else {
           throw new Error(`Missing control signal: ${controlSpec.name}`);
@@ -1055,14 +1051,14 @@ class MusicVAE {
 
     // Warn about any extraneous control signals.
     const controlNames = this.spec.extraControls ?
-        new Set<string>(
-            this.spec.extraControls.map((controlSpec) => controlSpec.name)) :
-        new Set<string>();
+      new Set<string>(
+        this.spec.extraControls.map((controlSpec) => controlSpec.name)) :
+      new Set<string>();
     for (const name in extraControls) {
       if (!controlNames.has(name)) {
         logging.log(
-            `Unspecified control signal provided: ${name}`, 'MusicVAE',
-            logging.Level.WARN);
+          `Unspecified control signal provided: ${name}`, 'MusicVAE',
+          logging.Level.WARN);
       }
     }
   }
@@ -1079,15 +1075,15 @@ class MusicVAE {
 
       if (controlArgs.chordProgression) {
         const encodedChords =
-            this.encodeChordProgression(controlArgs.chordProgression);
+          this.encodeChordProgression(controlArgs.chordProgression);
         controls.push(encodedChords);
       }
       if (controlArgs.key != null) {
         const encodedKey =
-            tf.oneHot(
-                tf.fill(
-                    [this.dataConverter.numSteps], controlArgs.key, 'int32'),
-                12) as tf.Tensor2D;
+          tf.oneHot(
+            tf.fill(
+              [this.dataConverter.numSteps], controlArgs.key, 'int32'),
+            12) as tf.Tensor2D;
         controls.push(encodedKey);
       }
       if (controlArgs.extraControls) {
@@ -1133,8 +1129,8 @@ class MusicVAE {
    * @returns A 3D `Tensor` of interpolations.
    */
   async interpolateTensors(
-      inputTensors: tf.Tensor3D, numInterps: number|number[],
-      temperature?: number, controlArgs?: MusicVAEControlArgs) {
+    inputTensors: tf.Tensor3D, numInterps: number | number[],
+    temperature?: number, controlArgs?: MusicVAEControlArgs) {
     if (!this.initialized) {
       await this.initialize();
     }
@@ -1142,7 +1138,7 @@ class MusicVAE {
     const interpZs = tf.tidy(() => this.getInterpolatedZs(inputZs, numInterps));
     inputZs.dispose();
     const outputTensors =
-        await this.decodeTensors(interpZs, temperature, controlArgs);
+      await this.decodeTensors(interpZs, temperature, controlArgs);
     interpZs.dispose();
     return outputTensors;
   }
@@ -1180,8 +1176,8 @@ class MusicVAE {
    * above.
    */
   async interpolate(
-      inputSequences: INoteSequence[], numInterps: number|number[],
-      temperature?: number, controlArgs?: MusicVAEControlArgs) {
+    inputSequences: INoteSequence[], numInterps: number | number[],
+    temperature?: number, controlArgs?: MusicVAEControlArgs) {
     this.checkControlArgs(controlArgs);
 
     if (!this.initialized) {
@@ -1196,9 +1192,9 @@ class MusicVAE {
     const outputSequences = this.decode(interpZs, temperature, controlArgs);
     interpZs.dispose();
     outputSequences.then(
-        () => logging.logWithDuration(
-            'Interpolation completed', startTime, 'MusicVAE',
-            logging.Level.DEBUG));
+      () => logging.logWithDuration(
+        'Interpolation completed', startTime, 'MusicVAE',
+        logging.Level.DEBUG));
     return outputSequences;
   }
 
@@ -1208,7 +1204,7 @@ class MusicVAE {
   private async getSegmentLengths(inputTensors: tf.Tensor3D) {
     if (inputTensors.shape[0] > 1) {
       throw new Error(
-          'Variable-length segments not supported for batch size > 1.');
+        'Variable-length segments not supported for batch size > 1.');
     }
 
     const numSteps = this.dataConverter.numSteps;
@@ -1217,11 +1213,11 @@ class MusicVAE {
     // Determine the segment lengths by finding the `endTensor` sentinel
     // value.
     const isEndTensor: tf.Tensor1D = tf.tidy(
-        () => tf.min(
-            tf.equal(
-                inputTensors.squeeze([0]),
-                this.dataConverter.endTensor.expandDims(0)),
-            1));
+      () => tf.min(
+        tf.equal(
+          inputTensors.squeeze([0]),
+          this.dataConverter.endTensor.expandDims(0)),
+        1));
     const isEndArray = await isEndTensor.data();
     isEndTensor.dispose();
 
@@ -1240,8 +1236,7 @@ class MusicVAE {
     }
 
     if (segmentLengths.length !== numSegments) {
-      throw new Error(`Incorrect number of segments: ${
-          segmentLengths.length} != ${numSegments}`);
+      throw new Error(`Incorrect number of segments: ${segmentLengths.length} != ${numSegments}`);
     }
 
     return segmentLengths;
@@ -1258,21 +1253,21 @@ class MusicVAE {
     const numSegments = this.dataConverter.numSegments;
 
     const numChordSteps = this.dataConverter.SEGMENTED_BY_TRACK ?
-        numSteps / numSegments :
-        numSteps;
+      numSteps / numSegments :
+      numSteps;
     const encodedChordProgression = this.dataConverter.SEGMENTED_BY_TRACK ?
-        tf.concat2d(
-            [
-              this.chordEncoder.encode(constants.NO_CHORD)
-                .expandDims(0) as tf.Tensor2D,
-              this.chordEncoder.encodeProgression(
-                  chordProgression, numChordSteps - 1)
-            ],
-            0) :
-        this.chordEncoder.encodeProgression(chordProgression, numChordSteps);
+      tf.concat2d(
+        [
+          this.chordEncoder.encode(constants.NO_CHORD)
+            .expandDims(0) as tf.Tensor2D,
+          this.chordEncoder.encodeProgression(
+            chordProgression, numChordSteps - 1)
+        ],
+        0) :
+      this.chordEncoder.encodeProgression(chordProgression, numChordSteps);
     return this.dataConverter.SEGMENTED_BY_TRACK ?
-        tf.tile(encodedChordProgression, [numSegments, 1]) :
-        encodedChordProgression;
+      tf.tile(encodedChordProgression, [numSegments, 1]) :
+      encodedChordProgression;
   }
 
   /**
@@ -1285,7 +1280,7 @@ class MusicVAE {
    * `[inputTensors.shape[0], zSize]`.
    */
   async encodeTensors(
-      inputTensors: tf.Tensor3D, controlArgs: MusicVAEControlArgs) {
+    inputTensors: tf.Tensor3D, controlArgs: MusicVAEControlArgs) {
     this.checkControlArgs(controlArgs);
 
     if (!this.initialized) {
@@ -1293,8 +1288,8 @@ class MusicVAE {
     }
 
     const segmentLengths = this.dataConverter.endTensor ?
-        await this.getSegmentLengths(inputTensors) :
-        undefined;
+      await this.getSegmentLengths(inputTensors) :
+      undefined;
 
     return tf.tidy(() => {
       const controlTensor = this.controlArgsToTensor(controlArgs);
@@ -1305,7 +1300,7 @@ class MusicVAE {
       if (controlTensor) {
         const tiles = tf.tile(
           tf.expandDims(controlTensor, 0),
-            [inputTensors.shape[0], 1, 1]) as tf.Tensor3D;
+          [inputTensors.shape[0], 1, 1]) as tf.Tensor3D;
         inputsAndControls.push(tiles);
       }
       const inputTensorsWithControls = tf.concat3d(inputsAndControls, 2);
@@ -1326,7 +1321,7 @@ class MusicVAE {
    * `[inputSequences.length, zSize]`.
    */
   async encode(
-      inputSequences: INoteSequence[], controlArgs?: MusicVAEControlArgs) {
+    inputSequences: INoteSequence[], controlArgs?: MusicVAEControlArgs) {
     if (!this.initialized) {
       await this.initialize();
     }
@@ -1334,16 +1329,16 @@ class MusicVAE {
     const startTime = performance.now();
 
     const inputTensors = tf.tidy(
-        () => tf.stack(inputSequences.map(
-                  t => this.dataConverter.toTensor(t) as tf.Tensor2D)) as
-            tf.Tensor3D);
+      () => tf.stack(inputSequences.map(
+        t => this.dataConverter.toTensor(t) as tf.Tensor2D)) as
+        tf.Tensor3D);
 
     const z = await this.encodeTensors(inputTensors, controlArgs);
 
     inputTensors.dispose();
 
     logging.logWithDuration(
-        'Encoding completed', startTime, 'MusicVAE', logging.Level.DEBUG);
+      'Encoding completed', startTime, 'MusicVAE', logging.Level.DEBUG);
     return z;
   }
 
@@ -1359,7 +1354,7 @@ class MusicVAE {
    * @returns The decoded tensors.
    */
   async decodeTensors(
-      z: tf.Tensor2D, temperature?: number, controlArgs?: MusicVAEControlArgs) {
+    z: tf.Tensor2D, temperature?: number, controlArgs?: MusicVAEControlArgs) {
     this.checkControlArgs(controlArgs);
 
     if (!this.initialized) {
@@ -1369,8 +1364,8 @@ class MusicVAE {
     return tf.tidy(() => {
       const controlTensor = this.controlArgsToTensor(controlArgs);
       return this.decoder.decode(
-          z, this.dataConverter.numSteps, undefined, temperature,
-          controlTensor);
+        z, this.dataConverter.numSteps, undefined, temperature,
+        controlTensor);
     });
   }
 
@@ -1389,9 +1384,9 @@ class MusicVAE {
    * @returns The decoded `NoteSequence`s.
    */
   async decode(
-      z: tf.Tensor2D, temperature?: number, controlArgs?: MusicVAEControlArgs,
-      stepsPerQuarter = constants.DEFAULT_STEPS_PER_QUARTER,
-      qpm = constants.DEFAULT_QUARTERS_PER_MINUTE) {
+    z: tf.Tensor2D, temperature?: number, controlArgs?: MusicVAEControlArgs,
+    stepsPerQuarter = constants.DEFAULT_STEPS_PER_QUARTER,
+    qpm = constants.DEFAULT_QUARTERS_PER_MINUTE) {
     if (!this.initialized) {
       await this.initialize();
     }
@@ -1401,31 +1396,31 @@ class MusicVAE {
     const tensors = await this.decodeTensors(z, temperature, controlArgs);
     const ohSeqs: tf.Tensor2D[] = tf.tidy(() => {
       return tf.split(tensors, tensors.shape[0])
-          .map(oh => oh.squeeze([0]) as tf.Tensor2D);
+        .map(oh => oh.squeeze([0]) as tf.Tensor2D);
     });
 
     const outputSequences: INoteSequence[] = [];
     for (const oh of ohSeqs) {
       outputSequences.push(
-          await this.dataConverter.toNoteSequence(oh, stepsPerQuarter, qpm));
+        await this.dataConverter.toNoteSequence(oh, stepsPerQuarter, qpm));
       oh.dispose();
     }
 
     tensors.dispose();
 
     logging.logWithDuration(
-        'Decoding completed', startTime, 'MusicVAE', logging.Level.DEBUG);
+      'Decoding completed', startTime, 'MusicVAE', logging.Level.DEBUG);
     return outputSequences;
   }
 
-  private getInterpolatedZs(z: tf.Tensor2D, numInterps: number|number[]) {
+  private getInterpolatedZs(z: tf.Tensor2D, numInterps: number | number[]) {
     if (typeof numInterps === 'number') {
       numInterps = [numInterps];
     }
 
     if (z.shape[0] !== 2 && z.shape[0] !== 4) {
       throw new Error(
-          'Invalid number of input sequences. Requires length 2, or 4');
+        'Invalid number of input sequences. Requires length 2, or 4');
     }
     if (numInterps.length !== 1 && numInterps.length !== 2) {
       throw new Error('Invalid number of dimensions. Requires length 1, or 2.');
@@ -1453,18 +1448,18 @@ class MusicVAE {
         const revRangeY = tf.scalar(1.0).sub(rangeY) as tf.Tensor1D;
 
         let finalZs =
-            z0.mul(tf.outerProduct(revRangeY, revRangeX).as3D(h, w, 1));
+          z0.mul(tf.outerProduct(revRangeY, revRangeX).as3D(h, w, 1));
         finalZs = tf.addStrict(
-            finalZs, z1.mul(tf.outerProduct(rangeY, revRangeX).as3D(h, w, 1)));
+          finalZs, z1.mul(tf.outerProduct(rangeY, revRangeX).as3D(h, w, 1)));
         finalZs = tf.addStrict(
-            finalZs, z2.mul(tf.outerProduct(revRangeY, rangeX).as3D(h, w, 1)));
+          finalZs, z2.mul(tf.outerProduct(revRangeY, rangeX).as3D(h, w, 1)));
         finalZs = tf.addStrict(
-            finalZs, z3.mul(tf.outerProduct(rangeY, rangeX).as3D(h, w, 1)));
+          finalZs, z3.mul(tf.outerProduct(rangeY, rangeX).as3D(h, w, 1)));
 
         return finalZs.as2D(w * h, z.shape[1]);
       } else {
         throw new Error(
-            'Invalid number of note sequences. Requires length 2, or 4');
+          'Invalid number of note sequences. Requires length 2, or 4');
       }
     });
     return interpolatedZs;
@@ -1481,17 +1476,17 @@ class MusicVAE {
    * @returns A `Tensor3D` of samples.
    */
   async sampleTensors(
-      numSamples: number, temperature = 0.5,
-      controlArgs?: MusicVAEControlArgs) {
+    numSamples: number, temperature = 0.5,
+    controlArgs?: MusicVAEControlArgs) {
     this.checkControlArgs(controlArgs);
 
     if (!this.initialized) {
       await this.initialize();
     }
     const randZs: tf.Tensor2D =
-        tf.tidy(() => tf.randomNormal([numSamples, this.decoder.zDims]));
+      tf.tidy(() => tf.randomNormal([numSamples, this.decoder.zDims]));
     const outputTensors =
-        await this.decodeTensors(randZs, temperature, controlArgs);
+      await this.decodeTensors(randZs, temperature, controlArgs);
     randZs.dispose();
     return outputTensors;
   }
@@ -1510,9 +1505,9 @@ class MusicVAE {
    * @returns An array of sampled `NoteSequence` objects.
    */
   async sample(
-      numSamples: number, temperature = 0.5, controlArgs?: MusicVAEControlArgs,
-      stepsPerQuarter = constants.DEFAULT_STEPS_PER_QUARTER,
-      qpm = constants.DEFAULT_QUARTERS_PER_MINUTE) {
+    numSamples: number, temperature = 0.5, controlArgs?: MusicVAEControlArgs,
+    stepsPerQuarter = constants.DEFAULT_STEPS_PER_QUARTER,
+    qpm = constants.DEFAULT_QUARTERS_PER_MINUTE) {
     this.checkControlArgs(controlArgs);
 
     if (!this.initialized) {
@@ -1521,13 +1516,13 @@ class MusicVAE {
     const startTime = performance.now();
 
     const randZs: tf.Tensor2D =
-        tf.tidy(() => tf.randomNormal([numSamples, this.decoder.zDims]));
+      tf.tidy(() => tf.randomNormal([numSamples, this.decoder.zDims]));
     const outputSequences =
-        this.decode(randZs, temperature, controlArgs, stepsPerQuarter, qpm);
+      this.decode(randZs, temperature, controlArgs, stepsPerQuarter, qpm);
     randZs.dispose();
     outputSequences.then(
-        () => logging.logWithDuration(
-            'Sampling completed', startTime, 'MusicVAE', logging.Level.DEBUG));
+      () => logging.logWithDuration(
+        'Sampling completed', startTime, 'MusicVAE', logging.Level.DEBUG));
     return outputSequences;
   }
 
@@ -1549,8 +1544,8 @@ class MusicVAE {
    * @returns A `Tensor3D` of samples.
    */
   async similarTensors(
-      inputTensor: tf.Tensor2D, numSamples: number, similarity: number,
-      temperature?: number, controlArgs?: MusicVAEControlArgs) {
+    inputTensor: tf.Tensor2D, numSamples: number, similarity: number,
+    temperature?: number, controlArgs?: MusicVAEControlArgs) {
     if (similarity < 0 || similarity > 1) {
       throw new Error('Similarity must be between 0 and 1.');
     }
@@ -1567,7 +1562,7 @@ class MusicVAE {
     });
     inputZs.dispose();
     const outputTensors =
-        await this.decodeTensors(similarZs, temperature, controlArgs);
+      await this.decodeTensors(similarZs, temperature, controlArgs);
     similarZs.dispose();
     return outputTensors;
   }
@@ -1590,8 +1585,8 @@ class MusicVAE {
    * @returns An array of generated `NoteSequence` objects.
    */
   async similar(
-      inputSequence: INoteSequence, numSamples: number, similarity: number,
-      temperature?: number, controlArgs?: MusicVAEControlArgs) {
+    inputSequence: INoteSequence, numSamples: number, similarity: number,
+    temperature?: number, controlArgs?: MusicVAEControlArgs) {
     this.checkControlArgs(controlArgs);
 
     if (similarity < 0 || similarity > 1) {
@@ -1614,9 +1609,9 @@ class MusicVAE {
     const outputSequences = this.decode(similarZs, temperature, controlArgs);
     similarZs.dispose();
     outputSequences.then(
-        () => logging.logWithDuration(
-            'Similar sequence generation completed', startTime, 'MusicVAE',
-            logging.Level.DEBUG));
+      () => logging.logWithDuration(
+        'Similar sequence generation completed', startTime, 'MusicVAE',
+        logging.Level.DEBUG));
     return outputSequences;
   }
 }
