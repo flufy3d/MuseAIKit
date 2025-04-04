@@ -18,7 +18,7 @@
 /**
  * Imports
  */
-import {INoteSequence, NoteSequence} from '../protobuf/index';
+import { INoteSequence, NoteSequence } from '../protobuf/index';
 
 import * as constants from './constants';
 import * as sequences from './sequences';
@@ -57,7 +57,7 @@ export interface VelocityChange {
   velocityBin: number;
 }
 
-export type PerformanceEvent = NoteOn|NoteOff|TimeShift|VelocityChange;
+export type PerformanceEvent = NoteOn | NoteOff | TimeShift | VelocityChange;
 
 /**
  * Performance representation with variable step size, consisting of a sequence
@@ -80,8 +80,8 @@ export class Performance {
   readonly isDrum?: boolean;
 
   constructor(
-      events: PerformanceEvent[], maxShiftSteps: number,
-      numVelocityBins: number, program?: number, isDrum?: boolean) {
+    events: PerformanceEvent[], maxShiftSteps: number,
+    numVelocityBins: number, program?: number, isDrum?: boolean) {
     this.events = events;
     this.maxShiftSteps = maxShiftSteps;
     this.numVelocityBins = numVelocityBins;
@@ -102,34 +102,34 @@ export class Performance {
    * @returns A `Performance` created from the `NoteSequence`.
    */
   static fromNoteSequence(
-      noteSequence: INoteSequence, maxShiftSteps: number,
-      numVelocityBins: number, instrument?: number) {
+    noteSequence: INoteSequence, maxShiftSteps: number,
+    numVelocityBins: number, instrument?: number) {
     sequences.assertIsQuantizedSequence(noteSequence);
 
     // First extract all desired notes and sort by increasing start time and
     // (secondarily) pitch.
     const notes = noteSequence.notes.filter(
-        (note, _) =>
-            instrument !== undefined ? note.instrument === instrument : true);
+      (note, _) =>
+        instrument !== undefined ? note.instrument === instrument : true);
     const sortedNotes = notes.sort(
-        (a, b) => a.startTime === b.startTime ? a.pitch - b.pitch :
-                                                a.startTime - b.startTime);
+      (a, b) => a.startTime === b.startTime ? a.pitch - b.pitch :
+        a.startTime - b.startTime);
 
     // Now sort all note start and end events by quantized time step and
     // position of the note in the above list.
     const onsets = sortedNotes.map(
-        (note, i) => ({step: note.quantizedStartStep, index: i, isOffset: 0}));
+      (note, i) => ({ step: note.quantizedStartStep, index: i, isOffset: 0 }));
     const offsets = sortedNotes.map(
-        (note, i) => ({step: note.quantizedEndStep, index: i, isOffset: 1}));
+      (note, i) => ({ step: note.quantizedEndStep, index: i, isOffset: 1 }));
     const noteEvents = onsets.concat(offsets).sort(
-        (a, b) => a.step === b.step ?
-            (a.index === b.index ? a.isOffset - b.isOffset :
-                                   a.index - b.index) :
-            a.step - b.step);
+      (a, b) => a.step === b.step ?
+        (a.index === b.index ? a.isOffset - b.isOffset :
+          a.index - b.index) :
+        a.step - b.step);
 
     const velocityBinSize = numVelocityBins ?
-        Math.ceil((constants.MIDI_VELOCITIES - 1) / numVelocityBins) :
-        undefined;
+      Math.ceil((constants.MIDI_VELOCITIES - 1) / numVelocityBins) :
+      undefined;
 
     const events: PerformanceEvent[] = [];
 
@@ -140,48 +140,48 @@ export class Performance {
       if (e.step > currentStep) {
         // The next note event requires a time shift.
         while (e.step > currentStep + maxShiftSteps) {
-          events.push({type: 'time-shift', steps: maxShiftSteps});
+          events.push({ type: 'time-shift', steps: maxShiftSteps });
           currentStep += maxShiftSteps;
         }
-        events.push({type: 'time-shift', steps: e.step - currentStep});
+        events.push({ type: 'time-shift', steps: e.step - currentStep });
         currentStep = e.step;
       }
 
       if (e.isOffset) {
         // Turn off the note.
-        events.push({type: 'note-off', pitch: sortedNotes[e.index].pitch});
+        events.push({ type: 'note-off', pitch: sortedNotes[e.index].pitch });
       } else {
         // Before we turn on the note, we may need to change the current
         // velocity bin.
         if (velocityBinSize) {
           const velocityBin = Math.floor(
-                                  (sortedNotes[e.index].velocity -
-                                   constants.MIN_MIDI_VELOCITY - 1) /
-                                  velocityBinSize) +
-              1;
+            (sortedNotes[e.index].velocity -
+              constants.MIN_MIDI_VELOCITY - 1) /
+            velocityBinSize) +
+            1;
           if (velocityBin !== currentVelocityBin) {
-            events.push({type: 'velocity-change', velocityBin});
+            events.push({ type: 'velocity-change', velocityBin });
             currentVelocityBin = velocityBin;
           }
         }
 
         // Now turn on the note.
-        events.push({type: 'note-on', pitch: sortedNotes[e.index].pitch});
+        events.push({ type: 'note-on', pitch: sortedNotes[e.index].pitch });
       }
     }
 
     // Determine the drum status, if consistent.
     const isDrum = notes.some(note => note.isDrum) ?
-        (notes.some(note => !note.isDrum) ? undefined : true) :
-        false;
+      (notes.some(note => !note.isDrum) ? undefined : true) :
+      false;
 
     // Determine the program used, if consistent.
     const programs = Array.from(new Set(notes.map(note => note.program)));
     const program =
-        (!isDrum && programs.length === 1) ? programs[0] : undefined;
+      (!isDrum && programs.length === 1) ? programs[0] : undefined;
 
     const performance = new Performance(
-        events, maxShiftSteps, numVelocityBins, program, isDrum);
+      events, maxShiftSteps, numVelocityBins, program, isDrum);
 
     // Make sure the performance has the correct number of steps.
     performance.setNumSteps(noteSequence.totalQuantizedSteps);
@@ -196,8 +196,8 @@ export class Performance {
    */
   getNumSteps() {
     return this.events.filter((event) => event.type === 'time-shift')
-        .map((event: TimeShift) => event.steps)
-        .reduce((a, b) => a + b, 0);
+      .map((event: TimeShift) => event.steps)
+      .reduce((a, b) => a + b, 0);
   }
 
   /**
@@ -215,7 +215,7 @@ export class Performance {
         const event = this.events[this.events.length - 1];
         if (event.type === 'time-shift') {
           const steps = Math.min(
-              numSteps - currentNumSteps, this.maxShiftSteps - event.steps);
+            numSteps - currentNumSteps, this.maxShiftSteps - event.steps);
           event.steps += steps;
           currentNumSteps += steps;
         }
@@ -223,10 +223,10 @@ export class Performance {
       while (currentNumSteps < numSteps) {
         if (currentNumSteps + this.maxShiftSteps > numSteps) {
           this.events.push(
-              {type: 'time-shift', steps: numSteps - currentNumSteps});
+            { type: 'time-shift', steps: numSteps - currentNumSteps });
           currentNumSteps = numSteps;
         } else {
-          this.events.push({type: 'time-shift', steps: this.maxShiftSteps});
+          this.events.push({ type: 'time-shift', steps: this.maxShiftSteps });
           currentNumSteps += this.maxShiftSteps;
         }
       }
@@ -257,8 +257,8 @@ export class Performance {
    */
   toNoteSequence(instrument?: number): INoteSequence {
     const velocityBinSize = this.numVelocityBins ?
-        Math.ceil((constants.MIDI_VELOCITIES - 1) / this.numVelocityBins) :
-        undefined;
+      Math.ceil((constants.MIDI_VELOCITIES - 1) / this.numVelocityBins) :
+      undefined;
 
     const noteSequence = NoteSequence.create();
 
@@ -269,7 +269,7 @@ export class Performance {
     // active notes at that pitch. Multiple notes can be active at the same
     // pitch.
     const pitchStartStepsAndVelocities =
-        new Map<number, Array<[number, number]>>();
+      new Map<number, Array<[number, number]>>();
     for (let i = constants.MIN_MIDI_PITCH; i <= constants.MAX_MIDI_PITCH; ++i) {
       pitchStartStepsAndVelocities.set(i, []);
     }
@@ -282,10 +282,10 @@ export class Performance {
             currentStep, currentVelocity
           ]);
           break;
-        case 'note-off':
+        case 'note-off': {
           // End an active note.
           const startStepsAndVelocities =
-              pitchStartStepsAndVelocities.get(event.pitch);
+            pitchStartStepsAndVelocities.get(event.pitch);
           if (startStepsAndVelocities.length) {
             const [startStep, velocity] = startStepsAndVelocities.shift();
             if (currentStep > startStep) {
@@ -300,17 +300,18 @@ export class Performance {
               }));
             } else {
               logging.log(
-                  'Ignoring zero-length note: ' +
-                  `(pitch = ${event.pitch}, step = ${currentStep})`,
-                  'Performance');
+                'Ignoring zero-length note: ' +
+                `(pitch = ${event.pitch}, step = ${currentStep})`,
+                'Performance');
             }
           } else {
             logging.log(
-                'Ignoring note-off with no previous note-on:' +
-                `(pitch = ${event.pitch}, step = ${currentStep})`,
-                'Performance');
+              'Ignoring note-off with no previous note-on:' +
+              `(pitch = ${event.pitch}, step = ${currentStep})`,
+              'Performance');
           }
           break;
+        }
         case 'time-shift':
           // Shift time forward.
           currentStep += event.steps;
@@ -319,7 +320,7 @@ export class Performance {
           // Change current velocity.
           if (velocityBinSize) {
             currentVelocity = constants.MIN_MIDI_VELOCITY +
-                (event.velocityBin - 1) * velocityBinSize + 1;
+              (event.velocityBin - 1) * velocityBinSize + 1;
           } else {
             throw new Error(`Unexpected velocity change event: ${event}`);
           }
@@ -345,9 +346,9 @@ export class Performance {
           }));
         } else {
           logging.log(
-              'Ignoring zero-length note: ' +
-              `(pitch = ${pitch}, step = ${currentStep})`, 
-              'Performance');
+            'Ignoring zero-length note: ' +
+            `(pitch = ${pitch}, step = ${currentStep})`,
+            'Performance');
         }
       }
     });
