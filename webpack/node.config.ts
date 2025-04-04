@@ -5,6 +5,11 @@ import {baseConfig} from './es6.base.config';
 
 module.exports = {
   ...baseConfig,
+  target: 'node',  // 明确指定目标环境为node
+  node: {
+    __dirname: false,  // 禁用webpack对__dirname的处理
+    __filename: false  // 禁用webpack对__filename的处理
+  },
   module: {
     rules: [{
       test: /\.ts$/,
@@ -24,10 +29,9 @@ module.exports = {
     library: 'mm',
     libraryTarget: 'umd',
     path: path.resolve(__dirname, '../node'),
-    globalObject: 'global'
+    globalObject: 'this'  // 修改为'this'以兼容node环境
   },
-  // If bundling for Node/Webpack usage, don't bundle node_modules.
-  externals: nodeExternals(),
+  externals: [nodeExternals()],  // 将externals改为数组形式
   plugins: [
     new webpack.NormalModuleReplacementPlugin(
       /\/core\/compat\/global\.ts/,

@@ -18,9 +18,9 @@
 
 import * as sr from 'staffrender';
 
-import {INoteSequence, NoteSequence} from '../protobuf/index';
+import { INoteSequence, NoteSequence } from '../protobuf/index';
 
-import {MAX_MIDI_PITCH, MIN_MIDI_PITCH} from './constants';
+import { MAX_MIDI_PITCH, MIN_MIDI_PITCH } from './constants';
 import * as logging from './logging';
 import * as sequences from './sequences';
 
@@ -73,7 +73,7 @@ export abstract class BaseVisualizer {
    * of the screen.
    */
   public abstract redraw(
-      activeNote?: NoteSequence.INote, scrollIntoView?: boolean): number;
+    activeNote?: NoteSequence.INote, scrollIntoView?: boolean): number;
 
   // Clears the current visualization.
   protected abstract clear(): void;
@@ -89,14 +89,14 @@ export abstract class BaseVisualizer {
    */
   constructor(sequence: INoteSequence, config: VisualizerConfig = {}) {
     // The core player (see player.ts:169) can only play unquantized sequences,
-    // and will unquantize any quantized sequences. We must do the same here, 
+    // and will unquantize any quantized sequences. We must do the same here,
     // or else in the redrawing callback none of the visual notes will be found.
     const isQuantized = sequences.isQuantizedSequence(sequence);
-    const qpm = (sequence.tempos && sequence.tempos.length > 0) ? 
-        sequence.tempos[0].qpm : undefined;
-    this.noteSequence = isQuantized ? 
-        sequences.unquantizeSequence(sequence, qpm) : sequence;
-    
+    const qpm = (sequence.tempos && sequence.tempos.length > 0) ?
+      sequence.tempos[0].qpm : undefined;
+    this.noteSequence = isQuantized ?
+      sequences.unquantizeSequence(sequence, qpm) : sequence;
+
     const defaultPixelsPerTimeStep = 30;
     this.config = {
       noteHeight: config.noteHeight || 6,
@@ -139,12 +139,12 @@ export abstract class BaseVisualizer {
     }
   }
 
-  protected getSize(): {width: number; height: number} {
+  protected getSize(): { width: number; height: number } {
     this.updateMinMaxPitches();
 
     // Height of the canvas based on the range of pitches in the sequence.
     const height =
-        (this.config.maxPitch - this.config.minPitch) * this.config.noteHeight;
+      (this.config.maxPitch - this.config.minPitch) * this.config.noteHeight;
 
     // Calculate a nice width based on the length of the sequence we're
     // playing.
@@ -153,40 +153,39 @@ export abstract class BaseVisualizer {
     const endTime = this.noteSequence.totalTime;
     if (!endTime) {
       throw new Error(
-          'The sequence you are using with the visualizer does not have a ' +
-          'totalQuantizedSteps or totalTime ' +
-          'field set, so the visualizer can\'t be horizontally ' +
-          'sized correctly.');
+        'The sequence you are using with the visualizer does not have a ' +
+        'totalQuantizedSteps or totalTime ' +
+        'field set, so the visualizer can\'t be horizontally ' +
+        'sized correctly.');
     }
 
     const width = (endTime * this.config.pixelsPerTimeStep);
-    return {width, height};
+    return { width, height };
   }
 
-  protected getNotePosition(note: NoteSequence.INote, noteIndex: number):
-      {x: number; y: number, w: number, h: number} {
+  protected getNotePosition(note: NoteSequence.INote, noteIndex: number): { x: number; y: number, w: number, h: number } {
     // Size of this note.
     const duration = this.getNoteEndTime(note) - this.getNoteStartTime(note);
     const x = (this.getNoteStartTime(note) * this.config.pixelsPerTimeStep);
     const w = Math.max(
-        this.config.pixelsPerTimeStep * duration - this.config.noteSpacing,
-        MIN_NOTE_LENGTH);
+      this.config.pixelsPerTimeStep * duration - this.config.noteSpacing,
+      MIN_NOTE_LENGTH);
 
     // The svg' y=0 is at the top, but a smaller pitch is actually
     // lower, so we're kind of painting backwards.
     const y = this.height -
-        ((note.pitch - this.config.minPitch) * this.config.noteHeight);
+      ((note.pitch - this.config.minPitch) * this.config.noteHeight);
 
-    return {x, y, w, h: this.config.noteHeight};
+    return { x, y, w, h: this.config.noteHeight };
   }
 
   protected scrollIntoViewIfNeeded(
-      scrollIntoView: boolean, activeNotePosition: number) {
+    scrollIntoView: boolean, activeNotePosition: number) {
     if (scrollIntoView && this.parentElement) {
       // See if we need to scroll the container.
       const containerWidth = this.parentElement.getBoundingClientRect().width;
       if (activeNotePosition >
-          (this.parentElement.scrollLeft + containerWidth)) {
+        (this.parentElement.scrollLeft + containerWidth)) {
         this.parentElement.scrollLeft = activeNotePosition - 20;
       }
     }
@@ -201,14 +200,14 @@ export abstract class BaseVisualizer {
   }
 
   protected isPaintingActiveNote(
-      note: NoteSequence.INote, playedNote: NoteSequence.INote): boolean {
+    note: NoteSequence.INote, playedNote: NoteSequence.INote): boolean {
     // A note is active if it's literally the same as the note we are
     // playing (aka activeNote), or if it overlaps because it's a held note.
     const isPlayedNote =
-        this.getNoteStartTime(note) === this.getNoteStartTime(playedNote);
+      this.getNoteStartTime(note) === this.getNoteStartTime(playedNote);
     const heldDownDuringPlayedNote =
-        this.getNoteStartTime(note) <= this.getNoteStartTime(playedNote) &&
-        this.getNoteEndTime(note) >= this.getNoteEndTime(playedNote);
+      this.getNoteStartTime(note) <= this.getNoteStartTime(playedNote) &&
+      this.getNoteEndTime(note) >= this.getNoteEndTime(playedNote);
     return isPlayedNote || heldDownDuringPlayedNote;
   }
 }
@@ -228,8 +227,8 @@ export class PianoRollCanvasVisualizer extends BaseVisualizer {
    * @param config (optional) Visualization configuration options.
    */
   constructor(
-      sequence: INoteSequence, canvas: HTMLCanvasElement,
-      config: VisualizerConfig = {}) {
+    sequence: INoteSequence, canvas: HTMLCanvasElement,
+    config: VisualizerConfig = {}) {
     super(sequence, config);
 
     // Initialize the canvas.
@@ -280,9 +279,9 @@ export class PianoRollCanvasVisualizer extends BaseVisualizer {
       const opacity = note.velocity ? note.velocity / 100 + opacityBaseline : 1;
 
       const isActive =
-          activeNote && this.isPaintingActiveNote(note, activeNote);
+        activeNote && this.isPaintingActiveNote(note, activeNote);
       const fill =
-          `rgba(${isActive ? this.config.activeNoteRGB : this.config.noteRGB},
+        `rgba(${isActive ? this.config.activeNoteRGB : this.config.noteRGB},
   ${opacity})`;
 
       this.redrawNote(size.x, size.y, size.w, size.h, fill);
@@ -308,7 +307,7 @@ export class PianoRollCanvasVisualizer extends BaseVisualizer {
 
     // Round values to the nearest integer to avoid partially filled pixels.
     this.ctx.fillRect(
-        Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+      Math.round(x), Math.round(y), Math.round(w), Math.round(h));
   }
 }
 
@@ -318,14 +317,14 @@ export class PianoRollCanvasVisualizer extends BaseVisualizer {
  */
 export class Visualizer extends PianoRollCanvasVisualizer {
   constructor(
-      sequence: INoteSequence, canvas: HTMLCanvasElement,
-      config: VisualizerConfig = {}) {
+    sequence: INoteSequence, canvas: HTMLCanvasElement,
+    config: VisualizerConfig = {}) {
     super(sequence, canvas, config);
 
     logging.log(
-        'mm.Visualizer is deprecated, and will be removed in a future \
+      'mm.Visualizer is deprecated, and will be removed in a future \
          version. Please use mm.PianoRollCanvasVisualizer instead',
-        'mm.Visualizer', logging.Level.WARN);
+      'mm.Visualizer', logging.Level.WARN);
   }
 }
 
@@ -385,7 +384,7 @@ export abstract class BaseSVGVisualizer extends BaseVisualizer {
     for (let i = 0; i < this.noteSequence.notes.length; i++) {
       const note = this.noteSequence.notes[i];
       const isActive =
-          activeNote && this.isPaintingActiveNote(note, activeNote);
+        activeNote && this.isPaintingActiveNote(note, activeNote);
 
       // We're only looking to re-paint the active notes.
       if (!isActive) {
@@ -411,8 +410,8 @@ export abstract class BaseSVGVisualizer extends BaseVisualizer {
     for (let i = 0; i < els.length; ++i) {
       const el = els[i];
       const fill = this.getNoteFillColor(
-          this.noteSequence.notes[parseInt(el.getAttribute('data-index'), 10)],
-          false);
+        this.noteSequence.notes[parseInt(el.getAttribute('data-index'), 10)],
+        false);
       el.setAttribute('fill', fill);
       el.classList.remove('active');
     }
@@ -432,11 +431,11 @@ export abstract class BaseSVGVisualizer extends BaseVisualizer {
       ];
       const cssProperties: CSSProperty[] = [
         ['--midi-velocity',
-         String(note.velocity !== undefined ? note.velocity : 127)]
+          String(note.velocity !== undefined ? note.velocity : 127)]
       ];
 
       this.drawNote(size.x, size.y, size.w, size.h, fill,
-                    dataAttributes, cssProperties);
+        dataAttributes, cssProperties);
     }
     this.drawn = true;
   }
@@ -445,19 +444,19 @@ export abstract class BaseSVGVisualizer extends BaseVisualizer {
     const opacityBaseline = 0.2;  // Shift all the opacities up a little.
     const opacity = note.velocity ? note.velocity / 100 + opacityBaseline : 1;
     const fill =
-        `rgba(${isActive ? this.config.activeNoteRGB : this.config.noteRGB},
+      `rgba(${isActive ? this.config.activeNoteRGB : this.config.noteRGB},
   ${opacity})`;
     return fill;
   }
 
   private drawNote(
-      x: number, y: number, w: number, h: number, fill: string,
-      dataAttributes: DataAttribute[], cssProperties: CSSProperty[]) {
+    x: number, y: number, w: number, h: number, fill: string,
+    dataAttributes: DataAttribute[], cssProperties: CSSProperty[]) {
     if (!this.svg) {
       return;
     }
     const rect: SVGRectElement =
-        document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.classList.add('note');
     rect.setAttribute('fill', fill);
 
@@ -504,13 +503,13 @@ export class PianoRollSVGVisualizer extends BaseSVGVisualizer {
    * @param config (optional) Visualization configuration options.
    */
   constructor(
-      sequence: INoteSequence, svg: SVGSVGElement,
-      config: VisualizerConfig = {}) {
+    sequence: INoteSequence, svg: SVGSVGElement,
+    config: VisualizerConfig = {}) {
     super(sequence, config);
 
     if (!(svg instanceof SVGSVGElement)) {
       throw new Error(
-          'This visualizer requires an <svg> element to display the visualization');
+        'This visualizer requires an <svg> element to display the visualization');
     }
     this.svg = svg;
     this.parentElement = svg.parentElement;
@@ -586,7 +585,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
   private lastDrawnOctave = 6;
 
   protected svgPiano: SVGSVGElement;
-  protected config: WaterfallVisualizerConfig;
+  declare protected config: WaterfallVisualizerConfig;
 
   /**
    * `WaterfallSVGVisualizer` constructor.
@@ -597,19 +596,19 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
    * @param config (optional) Visualization configuration options.
    */
   constructor(
-      sequence: INoteSequence, parentElement: HTMLDivElement,
-      config: WaterfallVisualizerConfig = {}) {
+    sequence: INoteSequence, parentElement: HTMLDivElement,
+    config: WaterfallVisualizerConfig = {}) {
     super(sequence, config);
 
     if (!(parentElement instanceof HTMLDivElement)) {
       throw new Error(
-          'This visualizer requires a <div> element to display the visualization');
+        'This visualizer requires a <div> element to display the visualization');
     }
 
     // Some sensible defaults.
     this.config.whiteNoteWidth = config.whiteNoteWidth || 20;
     this.config.blackNoteWidth =
-        config.blackNoteWidth || this.config.whiteNoteWidth * 2 / 3;
+      config.blackNoteWidth || this.config.whiteNoteWidth * 2 / 3;
     this.config.whiteNoteHeight = config.whiteNoteHeight || 70;
     this.config.blackNoteHeight = config.blackNoteHeight || (2 * 70 / 3);
     this.config.showOnlyOctavesUsed = config.showOnlyOctavesUsed;
@@ -630,7 +629,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     // Add a little bit of padding to the right, so that the scrollbar
     // doesn't overlap the last note on the piano.
     this.parentElement.style.width =
-        `${this.width + this.config.whiteNoteWidth}px`;
+      `${this.width + this.config.whiteNoteWidth}px`;
     this.parentElement.scrollTop = this.parentElement.scrollHeight;
 
     this.clear();
@@ -646,9 +645,9 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
 
     // Height and padding-top must match for this to work.
     this.parentElement.style.paddingTop =
-        `${height - this.config.whiteNoteHeight}px`;
+      `${height - this.config.whiteNoteHeight}px`;
     this.parentElement.style.height =
-        `${height - this.config.whiteNoteHeight}px`;
+      `${height - this.config.whiteNoteHeight}px`;
 
     this.parentElement.style.boxSizing = 'border-box';
     this.parentElement.style.overflowX = 'hidden';
@@ -656,7 +655,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
 
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.svgPiano =
-        document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.svg.classList.add('waterfall-notes');
     this.svgPiano.classList.add('waterfall-piano');
 
@@ -693,7 +692,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     for (let i = 0; i < this.noteSequence.notes.length; i++) {
       const note = this.noteSequence.notes[i];
       const isActive =
-          activeNote && this.isPaintingActiveNote(note, activeNote);
+        activeNote && this.isPaintingActiveNote(note, activeNote);
 
       // We're only looking to re-paint the active notes.
       if (!isActive) {
@@ -706,7 +705,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
 
       // And on the keyboard.
       const key =
-          this.svgPiano.querySelector(`rect[data-pitch="${note.pitch}"]`);
+        this.svgPiano.querySelector(`rect[data-pitch="${note.pitch}"]`);
       this.fillActiveRect(key, note);
 
       if (note === activeNote) {
@@ -725,7 +724,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     return null;
   }
 
-  protected getSize(): {width: number; height: number} {
+  protected getSize(): { width: number; height: number } {
     this.updateMinMaxPitches(true);
 
     let whiteNotesDrawn = 52;  // For a full piano.
@@ -748,7 +747,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
       }
 
       whiteNotesDrawn = (this.lastDrawnOctave - this.firstDrawnOctave + 1) *
-          this.WHITE_NOTES_PER_OCTAVE;
+        this.WHITE_NOTES_PER_OCTAVE;
     }
 
     const width = whiteNotesDrawn * this.config.whiteNoteWidth;
@@ -760,21 +759,20 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     const endTime = this.noteSequence.totalTime;
     if (!endTime) {
       throw new Error(
-          'The sequence you are using with the visualizer does not have a ' +
-          'totalQuantizedSteps or totalTime ' +
-          'field set, so the visualizer can\'t be horizontally ' +
-          'sized correctly.');
+        'The sequence you are using with the visualizer does not have a ' +
+        'totalQuantizedSteps or totalTime ' +
+        'field set, so the visualizer can\'t be horizontally ' +
+        'sized correctly.');
     }
 
     const height = Math.max(endTime * this.config.pixelsPerTimeStep,
-                            MIN_NOTE_LENGTH);
-    return {width, height};
+      MIN_NOTE_LENGTH);
+    return { width, height };
   }
 
-  protected getNotePosition(note: NoteSequence.INote, noteIndex: number):
-      {x: number; y: number, w: number, h: number} {
+  protected getNotePosition(note: NoteSequence.INote, noteIndex: number): { x: number; y: number, w: number, h: number } {
     const rect =
-        this.svgPiano.querySelector(`rect[data-pitch="${note.pitch}"]`);
+      this.svgPiano.querySelector(`rect[data-pitch="${note.pitch}"]`);
 
     if (!rect) {
       return null;
@@ -785,21 +783,21 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     const x = Number(rect.getAttribute('x'));
     const w = Number(rect.getAttribute('width'));
     const h = Math.max(
-        this.config.pixelsPerTimeStep * len - this.config.noteSpacing,
-        MIN_NOTE_LENGTH);
+      this.config.pixelsPerTimeStep * len - this.config.noteSpacing,
+      MIN_NOTE_LENGTH);
 
     // The svg' y=0 is at the top, but a smaller pitch is actually
     // lower, so we're kind of painting backwards.
     const y = this.height -
-        (this.getNoteStartTime(note) * this.config.pixelsPerTimeStep) - h;
-    return {x, y, w, h};
+      (this.getNoteStartTime(note) * this.config.pixelsPerTimeStep) - h;
+    return { x, y, w, h };
   }
 
   private drawPiano() {
     this.svgPiano.innerHTML = '';
 
     const blackNoteOffset =
-        this.config.whiteNoteWidth - this.config.blackNoteWidth / 2;
+      this.config.whiteNoteWidth - this.config.blackNoteWidth / 2;
     const blackNoteIndexes = [1, 3, 6, 8, 10];
 
     // Dear future reader: I am sure there is a better way to do this, but
@@ -820,7 +818,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     if (this.config.showOnlyOctavesUsed) {
       // Starting on a C, and a bunch of octaves up.
       currentPitch =
-          (this.firstDrawnOctave * this.NOTES_PER_OCTAVE) + this.LOW_C;
+        (this.firstDrawnOctave * this.NOTES_PER_OCTAVE) + this.LOW_C;
     } else {
       // Starting on the lowest A and B.
       currentPitch = this.LOW_C - 3;
@@ -845,7 +843,7 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     if (this.config.showOnlyOctavesUsed) {
       // Starting on a C, and a bunch of octaves up.
       currentPitch =
-          (this.firstDrawnOctave * this.NOTES_PER_OCTAVE) + this.LOW_C;
+        (this.firstDrawnOctave * this.NOTES_PER_OCTAVE) + this.LOW_C;
       x = -this.config.whiteNoteWidth;
     } else {
       // Before we reset, add an extra C at the end because pianos.
@@ -985,26 +983,26 @@ export class StaffSVGVisualizer extends BaseVisualizer {
    * @param config (optional) Visualization configuration options.
    */
   constructor(
-      sequence: INoteSequence, div: HTMLDivElement,
-      config: StaffSVGVisualizerConfig = {}) {
+    sequence: INoteSequence, div: HTMLDivElement,
+    config: StaffSVGVisualizerConfig = {}) {
     super(sequence, config);
     if (  // Overwritting super() value. Compact visualization as default.
-        config.pixelsPerTimeStep === undefined ||
-        config.pixelsPerTimeStep <= 0) {
+      config.pixelsPerTimeStep === undefined ||
+      config.pixelsPerTimeStep <= 0) {
       this.config.pixelsPerTimeStep = 0;
     }
     this.instruments = config.instruments || [];
     this.render = new sr.StaffSVGRender(
-        this.getScoreInfo(sequence), {
-          noteHeight: this.config.noteHeight,
-          noteSpacing: this.config.noteSpacing,
-          pixelsPerTimeStep: this.config.pixelsPerTimeStep,
-          noteRGB: this.config.noteRGB,
-          activeNoteRGB: this.config.activeNoteRGB,
-          defaultKey: config.defaultKey || 0,
-          scrollType: config.scrollType || ScrollType.PAGE,
-        },
-        div);
+      this.getScoreInfo(sequence), {
+      noteHeight: this.config.noteHeight,
+      noteSpacing: this.config.noteSpacing,
+      pixelsPerTimeStep: this.config.pixelsPerTimeStep,
+      noteRGB: this.config.noteRGB,
+      activeNoteRGB: this.config.activeNoteRGB,
+      defaultKey: config.defaultKey || 0,
+      scrollType: config.scrollType || ScrollType.PAGE,
+    },
+      div);
     this.drawnNotes = sequence.notes.length;
     this.clear();
     this.redraw();
@@ -1043,12 +1041,12 @@ export class StaffSVGVisualizer extends BaseVisualizer {
    * for automatically advancing the visualization if needed.
    */
   public redraw(activeNote?: NoteSequence.INote, scrollIntoView?: boolean):
-      number {
+    number {
     if (this.drawnNotes !== this.noteSequence.notes.length) {
       this.render.scoreInfo = this.getScoreInfo(this.noteSequence);
     }
     const activeNoteInfo =
-        activeNote ? this.getNoteInfo(activeNote) : undefined;
+      activeNote ? this.getNoteInfo(activeNote) : undefined;
     return this.render.redraw(activeNoteInfo, scrollIntoView);
   }
 
@@ -1086,24 +1084,24 @@ export class StaffSVGVisualizer extends BaseVisualizer {
     return {
       notes: notesInfo,
       tempos: sequence.tempos ?
-          sequence.tempos.map((t: NoteSequence.ITempo) => {
-            return {start: this.timeToQuarters(t.time), qpm: t.qpm};
-          }) :
-          [],
+        sequence.tempos.map((t: NoteSequence.ITempo) => {
+          return { start: this.timeToQuarters(t.time), qpm: t.qpm };
+        }) :
+        [],
       keySignatures: sequence.keySignatures ?
-          sequence.keySignatures.map((ks: NoteSequence.IKeySignature) => {
-            return {start: this.timeToQuarters(ks.time), key: ks.key};
-          }) :
-          [],
+        sequence.keySignatures.map((ks: NoteSequence.IKeySignature) => {
+          return { start: this.timeToQuarters(ks.time), key: ks.key };
+        }) :
+        [],
       timeSignatures: sequence.timeSignatures ?
-          sequence.timeSignatures.map((ts: NoteSequence.ITimeSignature) => {
-            return {
-              start: this.timeToQuarters(ts.time),
-              numerator: ts.numerator,
-              denominator: ts.denominator
-            };
-          }) :
-          []
+        sequence.timeSignatures.map((ts: NoteSequence.ITimeSignature) => {
+          return {
+            start: this.timeToQuarters(ts.time),
+            numerator: ts.numerator,
+            denominator: ts.denominator
+          };
+        }) :
+        []
     };
   }
 

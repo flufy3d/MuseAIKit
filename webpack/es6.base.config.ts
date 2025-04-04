@@ -21,7 +21,11 @@ export const baseConfig = {
     minimize: true,
     minimizer: [new Terser({terserOptions: {ecma: 8}, parallel: true})]
   },
-  node: {fs: 'empty'},
+  node: {
+    global: false,
+    __filename: false,
+    __dirname: false,
+  },
   resolve: {
     extensions: ['.ts', '.js'],
   },

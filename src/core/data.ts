@@ -307,7 +307,7 @@ export class DrumRollConverter extends DrumsConverter {
  *
  */
 export class DrumsOneHotConverter extends DrumsConverter {
-  readonly depth: number;
+  declare readonly depth: number;
 
   constructor(args: DrumsConverterArgs) {
     super(args);
