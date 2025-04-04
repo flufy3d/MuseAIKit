@@ -163,7 +163,10 @@ export abstract class BaseVisualizer {
     return { width, height };
   }
 
-  protected getNotePosition(note: NoteSequence.INote, noteIndex: number): { x: number; y: number, w: number, h: number } {
+  protected getNotePosition(
+    note: NoteSequence.INote,
+    noteIndex: number
+  ): { x: number; y: number, w: number, h: number } {
     // Size of this note.
     const duration = this.getNoteEndTime(note) - this.getNoteStartTime(note);
     const x = (this.getNoteStartTime(note) * this.config.pixelsPerTimeStep);
@@ -770,7 +773,10 @@ export class WaterfallSVGVisualizer extends BaseSVGVisualizer {
     return { width, height };
   }
 
-  protected getNotePosition(note: NoteSequence.INote, noteIndex: number): { x: number; y: number, w: number, h: number } {
+  protected getNotePosition(
+    note: NoteSequence.INote,
+    noteIndex: number
+  ): { x: number; y: number, w: number, h: number } {
     const rect =
       this.svgPiano.querySelector(`rect[data-pitch="${note.pitch}"]`);
 
