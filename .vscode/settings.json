@@ -18,7 +18,7 @@
     "editor.formatOnSave": true
   },
   "editor.rulers": [
-    80
+    120
   ],
   "clang-format.style": "Google",
   "files.insertFinalNewline": true,
