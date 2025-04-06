@@ -6,7 +6,7 @@ module.exports = {
   ...baseConfig,
   mode: 'production',
   entry: {
-    magentamusic: './src/lib.ts',
+    museaikit: './src/lib.ts',
   },
   output:
     { filename: 'museaikit.js', path: path.resolve(__dirname, '../dist') },
