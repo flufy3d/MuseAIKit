@@ -3,10 +3,9 @@ import * as mm from '../src/index';
 import { INoteSequence } from '../src/index';
 
 // Either define CHECKPOINTS_DIR directly (recommended if it's a constant value)
-const CHECKPOINTS_DIR = 'https://storage.googleapis.com/magentadata/js/checkpoints';
+import { CHECKPOINTS_DIR } from './common';
 
-// Or import it from common.ts (if available)
-// import {CHECKPOINTS_DIR} from './common';
+mm.logging.setVerbosity(mm.logging.Level.DEBUG);
 
 const CKPT_URL = `${CHECKPOINTS_DIR}/transcription/onsets_frames_uni`;
 
@@ -59,7 +58,7 @@ async function processAudioFile(file: File) {
     originalCanvas.id = 'original-visualizer-canvas';
     document.getElementById('original-visualizer').appendChild(originalCanvas);
     originalVisualizer = new mm.Visualizer(originalNs, originalCanvas);
-    
+
     const cleanedCanvas = document.createElement('canvas');
     cleanedCanvas.id = 'cleaned-visualizer-canvas';
     document.getElementById('cleaned-visualizer').appendChild(cleanedCanvas);
@@ -141,7 +140,7 @@ function updateNoteDisplay(original: mm.INoteSequence, cleaned: mm.INoteSequence
   document.getElementById('original-count').textContent = original.notes.length.toString();
   document.getElementById('cleaned-count').textContent = cleaned.notes.length.toString();
 
-  document.getElementById('original-notes').textContent = 
+  document.getElementById('original-notes').textContent =
     original.notes.map(n => `音高:${n.pitch} 开始:${n.startTime.toFixed(2)} 结束:${n.endTime.toFixed(2)}`).join('\n');
 
   document.getElementById('cleaned-notes').textContent =
