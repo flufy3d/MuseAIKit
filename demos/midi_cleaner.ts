@@ -22,46 +22,51 @@ document.getElementById('fileInput').addEventListener('change', (e: Event) => {
   }
 });
 
-// Change the visualizer import to use the correct type
-import { Visualizer } from '../src/core/visualizer';
-import { Player } from '../src/core/player';
+
 
 // In the global variable part add
-let player: Player;
-let visualizer: Visualizer;
-let originalNs: INoteSequence;
-let cleanedNs: INoteSequence;
+let player: mm.Player;
+let originalNs: mm.INoteSequence;
+let cleanedNs: mm.INoteSequence;
+let originalVisualizer: mm.Visualizer;
+let cleanedVisualizer: mm.Visualizer;
 
 // Modify processAudioFile function
 async function processAudioFile(file: File) {
   const audioPlayer = document.getElementById('audioPlayer') as HTMLAudioElement;
   audioPlayer.src = URL.createObjectURL(file);
-  
+
   const startTime = performance.now();
   const oaf = new mm.OnsetsAndFrames(CKPT_URL);
-  
+
   try {
     await oaf.initialize();
     originalNs = await oaf.transcribeFromAudioFile(file);
     cleanedNs = cleanMidiTranscription(originalNs);
-    
-    displayResults(originalNs, cleanedNs);
-    document.getElementById('time').textContent = 
-      `${((performance.now() - startTime)/1000).toFixed(2)} seconds`;
-    
-    // Initialize player and visualizer with proper types
+
+    // 更新显示
+    updateNoteDisplay(originalNs, cleanedNs);
+    document.getElementById('time').textContent =
+      `${((performance.now() - startTime) / 1000).toFixed(2)} 秒`;
+
+    // 初始化播放器
     if (!player) {
-      player = new Player(false, {
-        run: (note: mm.NoteSequence.INote) => {},
-        stop: () => {}
-      });
-      const canvas = document.createElement('canvas');
-      canvas.id = 'visualizer-canvas';
-      const visualizerDiv = document.getElementById('visualizer');
-      visualizerDiv.appendChild(canvas);
-      visualizer = new Visualizer(originalNs, canvas);
+      player = new mm.Player();
     }
-    visualizer.redraw();
+
+    // 创建两个可视化器
+    const originalCanvas = document.createElement('canvas');
+    originalCanvas.id = 'original-visualizer-canvas';
+    document.getElementById('original-visualizer').appendChild(originalCanvas);
+    originalVisualizer = new mm.Visualizer(originalNs, originalCanvas);
+    
+    const cleanedCanvas = document.createElement('canvas');
+    cleanedCanvas.id = 'cleaned-visualizer-canvas';
+    document.getElementById('cleaned-visualizer').appendChild(cleanedCanvas);
+    cleanedVisualizer = new mm.Visualizer(cleanedNs, cleanedCanvas);
+
+    originalVisualizer.redraw();
+    cleanedVisualizer.redraw();
   } finally {
     oaf.dispose();
   }
@@ -73,18 +78,20 @@ function setupPlaybackControls() {
     if (player && originalNs) {
       player.stop();
       player.start(originalNs);
-      visualizer.redraw();
+      originalVisualizer.redraw();
+      cleanedVisualizer.redraw();
     }
   });
-  
+
   document.getElementById('playCleanedBtn').addEventListener('click', () => {
     if (player && cleanedNs) {
       player.stop();
       player.start(cleanedNs);
-      visualizer.redraw();
+      originalVisualizer.redraw();
+      cleanedVisualizer.redraw();
     }
   });
-  
+
   document.getElementById('stopPlaybackBtn').addEventListener('click', () => {
     if (player) {
       player.stop();
@@ -129,18 +136,16 @@ function cleanMidiTranscription(ns: INoteSequence): INoteSequence {
   };
 }
 
-function displayResults(originalNs: INoteSequence, cleanedNs: INoteSequence) {
-  const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = `
-    <h3>Original Notes: ${originalNs.notes.length}</h3>
-    <p>${formatNotes(originalNs.notes)}</p>
-    <h3>Cleaned Notes: ${cleanedNs.notes.length}</h3>
-    <p>${formatNotes(cleanedNs.notes)}</p>
-  `;
+
+function updateNoteDisplay(original: mm.INoteSequence, cleaned: mm.INoteSequence) {
+  document.getElementById('original-count').textContent = original.notes.length.toString();
+  document.getElementById('cleaned-count').textContent = cleaned.notes.length.toString();
+
+  document.getElementById('original-notes').textContent = 
+    original.notes.map(n => `音高:${n.pitch} 开始:${n.startTime.toFixed(2)} 结束:${n.endTime.toFixed(2)}`).join('\n');
+
+  document.getElementById('cleaned-notes').textContent =
+    cleaned.notes.map(n => `音高:${n.pitch} 开始:${n.startTime.toFixed(2)} 结束:${n.endTime.toFixed(2)}`).join('\n');
 }
 
-function formatNotes(notes: mm.NoteSequence.INote[]): string {
-  return notes.map(n =>
-    `Pitch:${n.pitch} Start:${n.startTime.toFixed(2)} End:${n.endTime.toFixed(2)}`
-  ).join('\n');
-}
+
