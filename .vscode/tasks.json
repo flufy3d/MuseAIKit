@@ -9,8 +9,8 @@
           "lint"
         ],
         "problemMatcher": {
-          "base": "$tslint5",
-          "owner": "tslint-type-checked",
+          "base": "$eslint-stylish",
+          "owner": "eslint",
           "fileLocation": "absolute"
         }
       },
