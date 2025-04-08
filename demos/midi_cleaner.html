@@ -22,52 +22,36 @@ You may obtain a copy of the License at
 </head>
 <body>
   <h1>MIDI Cleaner</h1>
-  <p>Optimize piano transcription results by merging fragmented notes and filtering short notes.</p>
+  <p>Optimize audio transcription results by merging fragmented notes and filtering short notes.</p>
 
   <h2>Process Audio File</h2>
+  <p>You can use your own audio file for transcription:</p>
   <section>
     <label class="button">
-      Select Audio File
-      <input type="file" id="fileInput" accept="audio/*">
+      Load audio file
+      <input type="file" id="fileInput">
     </label>
-    <div class="audio-container">
-      <audio id="audioPlayer" controls></audio>
-    </div>
+    <br>
+    <p><audio id="filePlayer" controls hidden></audio></p>
+    <p><b>Actual Transcription:</b> <code id="file-results" class="file"></code></p>
+    <p><b>It Took:</b> <code id="file-time" class="file"></code></p>
+    <p><b>Total Leaked Memory:</b> <code id="file-leaked-memory"></code></b></p>
   </section>
 
-  <!-- 在<body>标签内，找到Processed Results部分，修改为： -->
-  <h2>Processed Results</h2>
-  <div id="results"></div>
-  <p>Processing time: <span id="time"></span></p>
 
-  <!-- 添加MIDI播放器部分 -->
-  <h3>MIDI Playback</h3>
-  <div>
-    <section>
-      <button id="playOriginalBtn">播放原始序列</button>
-      <button id="playCleanedBtn">播放清理后序列</button>
-      <button id="stopPlaybackBtn">停止播放</button>
+  <h2>Optimize Midi File</h2>
+  <p>Click the button to start MIDI optimization and cleaning process:</p>
+  <section>
+    <button  id="optimizeBtn">
+      Optimize MIDI
+    </button>
+    <br>
+    <p><audio id="optimizePlayer" controls hidden></audio></p>
+    <p><b>Actual Transcription:</b> <code id="optimize-results" class="optimize"></code></p>
+    <p><b>It Took:</b> <code id="optimize-time" class="optimize"></code></p>
+  </section>
 
-      <!-- 修改为两个可视化区域 -->
-      <div class="visualizer-container">
-        <h4>原始序列可视化</h4>
-        <div id="original-visualizer" style="width: 100%; height: 200px;"></div>
-      </div>
-      <div class="visualizer-container">
-        <h4>清理后序列可视化</h4>
-        <div id="cleaned-visualizer" style="width: 100%; height: 200px;"></div>
-      </div>
 
-      <h3>原始音符序列: <span id="original-count">0</span> 个音符</h3>
-      <pre id="original-notes" style="max-height: 200px; overflow: auto;"></pre>
-
-      <h3>清理后音符序列: <span id="cleaned-count">0</span> 个音符</h3>
-      <pre id="cleaned-notes" style="max-height: 200px; overflow: auto;"></pre>
-    </section>
-  </div>
-  <div class="audio-container">
-    <div id="visualizer" style="width: 100%; height: 200px;"></div>
-  </div>
 
   <script src="midi_cleaner_bundle.js"></script>
 </body>

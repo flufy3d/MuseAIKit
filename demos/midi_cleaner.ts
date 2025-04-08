@@ -1,9 +1,10 @@
-// Remove unused tf import
+import * as tf from '@tensorflow/tfjs';
 import * as mm from '../src/index';
 import { INoteSequence } from '../src/index';
 
-// Either define CHECKPOINTS_DIR directly (recommended if it's a constant value)
-import { CHECKPOINTS_DIR } from './common';
+
+import { CHECKPOINTS_DIR, writeMemory, writeNoteSeqs, writeTimer } from './common';
+
 
 mm.logging.setVerbosity(mm.logging.Level.DEBUG);
 
@@ -14,92 +15,46 @@ const MIN_NOTE_DURATION = 0.1;
 // 合并间隔(秒)，间隔小于这个值的连续相同音符会被合并
 const MERGE_THRESHOLD = 0.05;
 
-document.getElementById('fileInput').addEventListener('change', (e: Event) => {
-  const file = (e.target as HTMLInputElement).files[0];
-  if (file) {
-    processAudioFile(file);
-  }
-});
-
-
-
-// In the global variable part add
-let player: mm.Player;
 let originalNs: mm.INoteSequence;
 let cleanedNs: mm.INoteSequence;
-let originalVisualizer: mm.Visualizer;
-let cleanedVisualizer: mm.Visualizer;
+const optimizeBtn = document.getElementById('optimizeBtn') as HTMLButtonElement;
+optimizeBtn.disabled = true;
 
-// Modify processAudioFile function
-async function processAudioFile(file: File) {
-  const audioPlayer = document.getElementById('audioPlayer') as HTMLAudioElement;
-  audioPlayer.src = URL.createObjectURL(file);
+document.getElementById('fileInput').addEventListener('change', (e: any) => {
+  const file = e.target.files[0];
+  transcribeFromFile(file);
+  return false;
+});
 
-  const startTime = performance.now();
-  const oaf = new mm.OnsetsAndFrames(CKPT_URL);
+async function transcribeFromFile(blob: Blob, prefix = 'file') {
+  setLoadingMessage(prefix);
+  const audioEl =
+    document.getElementById(`${prefix}Player`) as HTMLAudioElement;
+  audioEl.hidden = false;
+  audioEl.src = window.URL.createObjectURL(blob);
 
-  try {
-    await oaf.initialize();
-    originalNs = await oaf.transcribeFromAudioFile(file);
-    cleanedNs = cleanMidiTranscription(originalNs);
+  const oafA = new mm.OnsetsAndFrames(CKPT_URL);
+  oafA.initialize()
+    .then(async () => {
+      const start = performance.now();
+      const ns = await oafA.transcribeFromAudioFile(blob);
+      originalNs = ns;
+      optimizeBtn.disabled = false;  // 音频处理完成后启用按钮
+      writeTimer(`${prefix}-time`, start);
+      writeNoteSeqs(`${prefix}-results`, [ns], true, true);
+    })
+    .then(() => oafA.dispose())
+    .then(() => writeMemory(tf.memory().numBytes, `${prefix}-leaked-memory`));
+}
 
-    // 更新显示
-    updateNoteDisplay(originalNs, cleanedNs);
-    document.getElementById('time').textContent =
-      `${((performance.now() - startTime) / 1000).toFixed(2)} 秒`;
-
-    // 初始化播放器
-    if (!player) {
-      player = new mm.Player();
-    }
-
-    // 创建两个可视化器
-    const originalCanvas = document.createElement('canvas');
-    originalCanvas.id = 'original-visualizer-canvas';
-    document.getElementById('original-visualizer').appendChild(originalCanvas);
-    originalVisualizer = new mm.Visualizer(originalNs, originalCanvas);
-
-    const cleanedCanvas = document.createElement('canvas');
-    cleanedCanvas.id = 'cleaned-visualizer-canvas';
-    document.getElementById('cleaned-visualizer').appendChild(cleanedCanvas);
-    cleanedVisualizer = new mm.Visualizer(cleanedNs, cleanedCanvas);
-
-    originalVisualizer.redraw();
-    cleanedVisualizer.redraw();
-  } finally {
-    oaf.dispose();
+function setLoadingMessage(className: string) {
+  const els = document.querySelectorAll(`.${className}`);
+  for (let i = 0; i < els.length; i++) {
+    els[i].textContent = 'Loading...';
   }
 }
 
-// Update the playback control functions
-function setupPlaybackControls() {
-  document.getElementById('playOriginalBtn').addEventListener('click', () => {
-    if (player && originalNs) {
-      player.stop();
-      player.start(originalNs);
-      originalVisualizer.redraw();
-      cleanedVisualizer.redraw();
-    }
-  });
 
-  document.getElementById('playCleanedBtn').addEventListener('click', () => {
-    if (player && cleanedNs) {
-      player.stop();
-      player.start(cleanedNs);
-      originalVisualizer.redraw();
-      cleanedVisualizer.redraw();
-    }
-  });
-
-  document.getElementById('stopPlaybackBtn').addEventListener('click', () => {
-    if (player) {
-      player.stop();
-    }
-  });
-}
-
-// In DOM loaded call
-document.addEventListener('DOMContentLoaded', setupPlaybackControls);
 
 function cleanMidiTranscription(ns: INoteSequence): INoteSequence {
   const cleanedNotes = [];
@@ -136,15 +91,16 @@ function cleanMidiTranscription(ns: INoteSequence): INoteSequence {
 }
 
 
-function updateNoteDisplay(original: mm.INoteSequence, cleaned: mm.INoteSequence) {
-  document.getElementById('original-count').textContent = original.notes.length.toString();
-  document.getElementById('cleaned-count').textContent = cleaned.notes.length.toString();
 
-  document.getElementById('original-notes').textContent =
-    original.notes.map(n => `音高:${n.pitch} 开始:${n.startTime.toFixed(2)} 结束:${n.endTime.toFixed(2)}`).join('\n');
+document.getElementById('optimizeBtn').addEventListener('click', (e: any) => {
+  let prefix = 'optimize';
+  if (originalNs) {
+    setLoadingMessage(prefix);
+    const start = performance.now();
+    cleanedNs = cleanMidiTranscription(originalNs);
+    writeTimer(`${prefix}-time`, start);
+    writeNoteSeqs(`${prefix}-results`, [cleanedNs], true, true);
 
-  document.getElementById('cleaned-notes').textContent =
-    cleaned.notes.map(n => `音高:${n.pitch} 开始:${n.startTime.toFixed(2)} 结束:${n.endTime.toFixed(2)}`).join('\n');
-}
-
-
+  }
+  return false;
+});
