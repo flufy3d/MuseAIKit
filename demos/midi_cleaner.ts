@@ -167,11 +167,17 @@ function cleanMidiTranscription(
   minNoteDuration: number,
   mergeThreshold: number
 ): mm.INoteSequence {
-  // First, merge notes with the same pitch
-  const samePitchMerged = mergeSamePitchNotes(ns.notes, mergeThreshold);
+  // 创建防御性副本
+  const clonedNotes = ns.notes.map(note => ({ ...note }));
+
+  // 使用克隆后的数据进行处理
+  const samePitchMerged = mergeSamePitchNotes(clonedNotes, mergeThreshold);
   const allMerged = mergeDifferentPitchNotes(samePitchMerged, mergeThreshold);
-  // Filter out notes that are too short
-  const cleanedNotes = allMerged.filter(note => (note.endTime - note.startTime) >= minNoteDuration);
+
+  const cleanedNotes = allMerged.filter(note =>
+    (note.endTime - note.startTime) >= minNoteDuration
+  );
+
   return {
     ...ns,
     notes: cleanedNotes
@@ -186,9 +192,7 @@ document.getElementById('optimizeBtn').addEventListener('click', (e: any) => {
     const start = performance.now();
     const minDuration = parseFloat(minDurationSlider.value);
     const mergeThreshold = parseFloat(mergeThresholdSlider.value);
-    // 使用深拷贝来创建一个原始转录结果的副本
-    const originalNsCopy = JSON.parse(JSON.stringify(originalNs));
-    const cleanedNs = cleanMidiTranscription(originalNsCopy, minDuration, mergeThreshold);
+    const cleanedNs = cleanMidiTranscription(originalNs, minDuration, mergeThreshold);
     writeTimer(`${prefix}-time`, start);
     writeNoteSeqs(`${prefix}-results`, [cleanedNs], true, true);
   }
