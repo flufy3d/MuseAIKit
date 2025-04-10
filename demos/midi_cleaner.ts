@@ -9,13 +9,9 @@ mm.logging.setVerbosity(mm.logging.Level.DEBUG);
 
 const CKPT_URL = `${CHECKPOINTS_DIR}/transcription/onsets_frames_uni`;
 
-// 最小音符时长(秒)，短于这个值的音符会被过滤
-const MIN_NOTE_DURATION = 0.1;
-// 合并间隔(秒)，间隔小于这个值的连续相同音符会被合并
-const MERGE_THRESHOLD = 0.08;
 
 let originalNs: mm.INoteSequence;
-let cleanedNs: mm.INoteSequence;
+
 const optimizeBtn = document.getElementById('optimizeBtn') as HTMLButtonElement;
 optimizeBtn.disabled = true;
 
@@ -60,7 +56,15 @@ function setLoadingMessage(className: string) {
  * For each group of same-pitch notes, the function sorts them by startTime and merges notes
  * that are overlapping or nearly consecutive (gap < MERGE_THRESHOLD).
  */
-function mergeSamePitchNotes(notes: mm.NoteSequence.INote[]): mm.NoteSequence.INote[] {
+// 移除原来的全局变量定义
+// const MIN_NOTE_DURATION = 0.1;
+// const MERGE_THRESHOLD = 0.08;
+
+// 修改mergeSamePitchNotes函数签名
+function mergeSamePitchNotes(
+  notes: mm.NoteSequence.INote[],
+  mergeThreshold: number
+): mm.NoteSequence.INote[] {
   // Group notes by pitch
   const groups: { [pitch: number]: mm.NoteSequence.INote[] } = {};
   notes.forEach(note => {
@@ -79,7 +83,8 @@ function mergeSamePitchNotes(notes: mm.NoteSequence.INote[]): mm.NoteSequence.IN
     for (let i = 1; i < group.length; i++) {
       const note = group[i];
       // Check if the next note overlaps or is nearly consecutive
-      if (note.startTime - current.endTime < MERGE_THRESHOLD || note.startTime <= current.endTime) {
+      // 修改检查条件
+      if (note.startTime - current.endTime < mergeThreshold || note.startTime <= current.endTime) {
         // Merge by updating the endTime to the maximum value
         current.endTime = Math.max(current.endTime, note.endTime);
       } else {
@@ -98,7 +103,11 @@ function mergeSamePitchNotes(notes: mm.NoteSequence.INote[]): mm.NoteSequence.IN
  * Merge notes with different pitches if their time intervals overlap or are nearly consecutive.
  * The merging is done by merging the shorter note into the longer note.
  */
-function mergeDifferentPitchNotes(notes: mm.NoteSequence.INote[]): mm.NoteSequence.INote[] {
+// 修改mergeDifferentPitchNotes函数签名
+function mergeDifferentPitchNotes(
+  notes: mm.NoteSequence.INote[],
+  mergeThreshold: number
+): mm.NoteSequence.INote[] {
   // Sort notes by startTime
   const mergedNotes = notes.slice().sort((a, b) => a.startTime - b.startTime);
   let merged = true;
@@ -114,7 +123,7 @@ function mergeDifferentPitchNotes(notes: mm.NoteSequence.INote[]): mm.NoteSequen
             (mergedNotes[j].startTime < mergedNotes[i].endTime);
           // Check if notes are nearly consecutive in time
           const gap = mergedNotes[j].startTime - mergedNotes[i].endTime;
-          const nearlyConsecutive = gap < MERGE_THRESHOLD && gap >= 0;
+          const nearlyConsecutive = gap < mergeThreshold && gap >= 0;
 
           if (overlap || nearlyConsecutive) {
             // Calculate durations for both notes
@@ -152,13 +161,17 @@ function mergeDifferentPitchNotes(notes: mm.NoteSequence.INote[]): mm.NoteSequen
  * Clean MIDI transcription by first merging same-pitch notes and then merging different-pitch notes.
  * Finally, filter out notes with duration less than MIN_NOTE_DURATION.
  */
-function cleanMidiTranscription(ns: mm.INoteSequence): mm.INoteSequence {
+// 修改mergeDifferentPitchNotes函数签名
+function cleanMidiTranscription(
+  ns: mm.INoteSequence,
+  minNoteDuration: number,
+  mergeThreshold: number
+): mm.INoteSequence {
   // First, merge notes with the same pitch
-  const samePitchMerged = mergeSamePitchNotes(ns.notes);
-  // Next, process merging of notes with different pitches
-  const allMerged = mergeDifferentPitchNotes(samePitchMerged);
+  const samePitchMerged = mergeSamePitchNotes(ns.notes, mergeThreshold);
+  const allMerged = mergeDifferentPitchNotes(samePitchMerged, mergeThreshold);
   // Filter out notes that are too short
-  const cleanedNotes = allMerged.filter(note => (note.endTime - note.startTime) >= MIN_NOTE_DURATION);
+  const cleanedNotes = allMerged.filter(note => (note.endTime - note.startTime) >= minNoteDuration);
   return {
     ...ns,
     notes: cleanedNotes
@@ -166,17 +179,42 @@ function cleanMidiTranscription(ns: mm.INoteSequence): mm.INoteSequence {
 }
 
 
-
-
 document.getElementById('optimizeBtn').addEventListener('click', (e: any) => {
   let prefix = 'optimize';
   if (originalNs) {
     setLoadingMessage(prefix);
     const start = performance.now();
-    cleanedNs = cleanMidiTranscription(originalNs);
+    const minDuration = parseFloat(minDurationSlider.value);
+    const mergeThreshold = parseFloat(mergeThresholdSlider.value);
+    // 使用深拷贝来创建一个原始转录结果的副本
+    const originalNsCopy = JSON.parse(JSON.stringify(originalNs));
+    const cleanedNs = cleanMidiTranscription(originalNsCopy, minDuration, mergeThreshold);
     writeTimer(`${prefix}-time`, start);
     writeNoteSeqs(`${prefix}-results`, [cleanedNs], true, true);
-
   }
   return false;
+});
+
+// 在文件顶部添加这些常量声明后
+const minDurationSlider = document.getElementById('minDurationSlider') as HTMLInputElement;
+const mergeThresholdSlider = document.getElementById('mergeThresholdSlider') as HTMLInputElement;
+const minDurationValue = document.getElementById('minDurationValue') as HTMLSpanElement;
+const mergeThresholdValue = document.getElementById('mergeThresholdValue') as HTMLSpanElement;
+
+// 添加滑块值变化监听器
+minDurationSlider.addEventListener('input', () => {
+  minDurationValue.textContent = minDurationSlider.value;
+});
+
+mergeThresholdSlider.addEventListener('input', () => {
+  mergeThresholdValue.textContent = mergeThresholdSlider.value;
+});
+
+// 在滑块监听器后面添加重置按钮处理
+const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
+resetBtn.addEventListener('click', () => {
+  minDurationSlider.value = '0.1';
+  mergeThresholdSlider.value = '0.08';
+  minDurationValue.textContent = '0.1';
+  mergeThresholdValue.textContent = '0.08';
 });
