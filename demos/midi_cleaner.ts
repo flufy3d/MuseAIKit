@@ -211,7 +211,8 @@ function quantizeNotes(
 function cleanMidiTranscription(
   ns: mm.INoteSequence,
   minNoteDuration: number,
-  mergeThreshold: number
+  mergeThreshold: number,
+  quantizeResolution: number
 ): mm.INoteSequence {
   // 创建防御性副本
   const clonedNotes = ns.notes.map(note => ({ ...note }));
@@ -224,7 +225,7 @@ function cleanMidiTranscription(
     (note.endTime - note.startTime) >= minNoteDuration
   );
 
-  const quantized = quantizeNotes(cleanedNotes, 0.5);
+  const quantized = quantizeNotes(cleanedNotes, quantizeResolution);
 
   return {
     ...ns,
@@ -240,7 +241,8 @@ document.getElementById('optimizeBtn').addEventListener('click', (e: any) => {
     const start = performance.now();
     const minDuration = parseFloat(minDurationSlider.value);
     const mergeThreshold = parseFloat(mergeThresholdSlider.value);
-    const cleanedNs = cleanMidiTranscription(originalNs, minDuration, mergeThreshold);
+    const quantizeResolution = parseFloat(quantizeResolutionSlider.value);
+    const cleanedNs = cleanMidiTranscription(originalNs, minDuration, mergeThreshold, quantizeResolution);
     writeTimer(`${prefix}-time`, start);
     writeNoteSeqs(`${prefix}-results`, [cleanedNs], true, true);
   }
@@ -250,8 +252,10 @@ document.getElementById('optimizeBtn').addEventListener('click', (e: any) => {
 // 在文件顶部添加这些常量声明后
 const minDurationSlider = document.getElementById('minDurationSlider') as HTMLInputElement;
 const mergeThresholdSlider = document.getElementById('mergeThresholdSlider') as HTMLInputElement;
+const quantizeResolutionSlider = document.getElementById('quantizeResolutionSlider') as HTMLInputElement;
 const minDurationValue = document.getElementById('minDurationValue') as HTMLSpanElement;
 const mergeThresholdValue = document.getElementById('mergeThresholdValue') as HTMLSpanElement;
+const quantizeResolutionValue = document.getElementById('quantizeResolutionValue') as HTMLSpanElement;
 
 // 添加滑块值变化监听器
 minDurationSlider.addEventListener('input', () => {
@@ -262,11 +266,17 @@ mergeThresholdSlider.addEventListener('input', () => {
   mergeThresholdValue.textContent = mergeThresholdSlider.value;
 });
 
+quantizeResolutionSlider.addEventListener('input', () => {
+  quantizeResolutionValue.textContent = quantizeResolutionSlider.value;
+});
+
 // 在滑块监听器后面添加重置按钮处理
 const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
 resetBtn.addEventListener('click', () => {
   minDurationSlider.value = '0.1';
   mergeThresholdSlider.value = '0.08';
+  quantizeResolutionSlider.value = '0.5';
   minDurationValue.textContent = '0.1';
   mergeThresholdValue.textContent = '0.08';
+  quantizeResolutionValue.textContent = '0.5';
 });
