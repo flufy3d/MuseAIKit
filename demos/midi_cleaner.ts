@@ -160,10 +160,16 @@ function mergeDifferentPitchNotes(
 /**
  * Adaptive quantize notes by snapping note start and end times to the nearest grid defined by resolution,
  * and remove the initial silence before the first note.
+ * If the original gap between two notes is smaller than the resolution,
+ * shift the current note (and subsequent ones accordingly) so that its quantized start time
+ * exactly equals the previous note's quantized end time.
  *
  * 自适应量化音符：
- * 1. 移除第一个音符前面的静默（将所有音符平移，使得第一个音符的 startTime 为 0）。
- * 2. 根据给定的 resolution 对齐所有音符的起始和结束时间。
+ * 1. 移除第一个音符前的静默（将所有音符平移，使得第一个音符的 startTime 为 0）。
+ * 2. 根据给定分辨率对音符的起始和结束时间进行量化。
+ * 3. 如果原始音符之间的 gap 小于一个网格，则将当前音符整体向前平移，
+ *    使得当前音符的量化起始时间等于前一音符的量化结束时间，
+ *    从而删除空 gap，同时保持该音符原有的时长。
  *
  * @param notes An array of note objects (mm.NoteSequence.INote[])
  * @param resolution The grid resolution used for quantization
@@ -175,31 +181,61 @@ function quantizeNotes(
 ): mm.NoteSequence.INote[] {
   if (notes.length === 0) return notes;
 
-  // Remove silence before the first note
-  // 计算所有音符中最小的 startTime 并作为偏移量将所有音符向左平移
+  // 1. Remove initial silence.
   const firstOnset = Math.min(...notes.map(note => note.startTime));
   const shiftedNotes = notes.map(note => ({
     ...note,
-    startTime: note.startTime - firstOnset,  // subtract initial silence
-    endTime: note.endTime - firstOnset,      // subtract initial silence
+    startTime: note.startTime - firstOnset,  // remove initial silence
+    endTime: note.endTime - firstOnset,        // remove initial silence
   }));
 
-  // Adaptive quantization:
-  // 对每个音符的起始和结束时间进行量化，四舍五入到最近的 resolution 倍数
-  const quantizedNotes = shiftedNotes.map(note => {
-    // Round start and end times to nearest grid
-    // 使用 resolution 对时间进行量化，对齐到自适应网格上
-    const qStart = Math.round(note.startTime / resolution) * resolution;
-    const qEnd = Math.round(note.endTime / resolution) * resolution;
-    // Prevent collapsing the note duration: Ensure that the duration is at least one grid unit
-    const adjustedEnd = (qEnd <= qStart) ? qStart + resolution : qEnd;
-    return {
-      ...note,
-      startTime: qStart,
-      endTime: adjustedEnd,
-    };
-  });
+  // Sort notes by startTime for sequential processing.
+  const sortedNotes = shiftedNotes.slice().sort((a, b) => a.startTime - b.startTime);
 
+  const quantizedNotes: mm.NoteSequence.INote[] = [];
+  // cumulativeShift 用于累计前移的时间量，保证后续音符也整体前移。
+  let cumulativeShift = 0;
+
+  for (let i = 0; i < sortedNotes.length; i++) {
+    // 2. Standard quantization: round start and end times to the nearest grid.
+    let qStart = Math.round(sortedNotes[i].startTime / resolution) * resolution;
+    let qEnd = Math.round(sortedNotes[i].endTime / resolution) * resolution;
+
+    // Ensure a minimum duration of one grid unit.
+    if (qEnd <= qStart) {
+      qEnd = qStart + resolution;
+    }
+
+    // Apply the cumulative shift from previous gap removals.
+    qStart = qStart - cumulativeShift;
+    qEnd = qEnd - cumulativeShift;
+
+    // 3. If the original gap between this note and the previous note is smaller than resolution,
+    //    force the current note to be contiguous with the previous note.
+    if (i > 0) {
+      // original gap computed from shiftedNotes (移除静默后的时间差)
+      const originalGap = sortedNotes[i].startTime - sortedNotes[i - 1].endTime;
+      if (originalGap < resolution) {
+        // Set desired start as the previous note's quantized end.
+        const desiredStart = quantizedNotes[i - 1].endTime;
+        // Calculate how much current note's quantized start is ahead of desiredStart.
+        const shift = qStart - desiredStart;
+        if (shift > 0) {
+          // Shift current note left by 'shift', preserving its duration.
+          qStart = qStart - shift;
+          qEnd = qEnd - shift;
+          // 累计偏移量也相应增加，确保后续的音符都一并前移。
+          cumulativeShift += shift;
+        }
+      }
+    }
+
+    quantizedNotes.push({
+      ...sortedNotes[i],
+      startTime: qStart,
+      endTime: qEnd,
+    });
+  }
   return quantizedNotes;
 }
 
