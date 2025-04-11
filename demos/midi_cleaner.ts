@@ -158,10 +158,56 @@ function mergeDifferentPitchNotes(
 }
 
 /**
+ * Adaptive quantize notes by snapping note start and end times to the nearest grid defined by resolution,
+ * and remove the initial silence before the first note.
+ *
+ * 自适应量化音符：
+ * 1. 移除第一个音符前面的静默（将所有音符平移，使得第一个音符的 startTime 为 0）。
+ * 2. 根据给定的 resolution 对齐所有音符的起始和结束时间。
+ *
+ * @param notes An array of note objects (mm.NoteSequence.INote[])
+ * @param resolution The grid resolution used for quantization
+ * @returns New array of note objects with quantized time values
+ */
+function quantizeNotes(
+  notes: mm.NoteSequence.INote[],
+  resolution: number
+): mm.NoteSequence.INote[] {
+  if (notes.length === 0) return notes;
+
+  // Remove silence before the first note
+  // 计算所有音符中最小的 startTime 并作为偏移量将所有音符向左平移
+  const firstOnset = Math.min(...notes.map(note => note.startTime));
+  const shiftedNotes = notes.map(note => ({
+    ...note,
+    startTime: note.startTime - firstOnset,  // subtract initial silence
+    endTime: note.endTime - firstOnset,      // subtract initial silence
+  }));
+
+  // Adaptive quantization:
+  // 对每个音符的起始和结束时间进行量化，四舍五入到最近的 resolution 倍数
+  const quantizedNotes = shiftedNotes.map(note => {
+    // Round start and end times to nearest grid
+    // 使用 resolution 对时间进行量化，对齐到自适应网格上
+    const qStart = Math.round(note.startTime / resolution) * resolution;
+    const qEnd = Math.round(note.endTime / resolution) * resolution;
+    // Prevent collapsing the note duration: Ensure that the duration is at least one grid unit
+    const adjustedEnd = (qEnd <= qStart) ? qStart + resolution : qEnd;
+    return {
+      ...note,
+      startTime: qStart,
+      endTime: adjustedEnd,
+    };
+  });
+
+  return quantizedNotes;
+}
+
+
+/**
  * Clean MIDI transcription by first merging same-pitch notes and then merging different-pitch notes.
  * Finally, filter out notes with duration less than MIN_NOTE_DURATION.
  */
-// 修改mergeDifferentPitchNotes函数签名
 function cleanMidiTranscription(
   ns: mm.INoteSequence,
   minNoteDuration: number,
@@ -178,9 +224,11 @@ function cleanMidiTranscription(
     (note.endTime - note.startTime) >= minNoteDuration
   );
 
+  const quantized = quantizeNotes(cleanedNotes, 0.5);
+
   return {
     ...ns,
-    notes: cleanedNotes
+    notes: quantized
   };
 }
 
