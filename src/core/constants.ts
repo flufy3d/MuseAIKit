@@ -35,8 +35,8 @@ export const DEFAULT_PROGRAM = 0;
 export const DEFAULT_TICKS_PER_QUARTER = 220;
 export const DEFAULT_CHANNEL = 0;
 export const DRUM_CHANNEL = 9;
-export const NON_DRUM_CHANNELS : ReadonlyArray<number> =
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15];
+export const NON_DRUM_CHANNELS: ReadonlyArray<number> =
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15];
 export const DEFAULT_DRUM_PITCH_CLASSES: number[][] = [
   // bass drum
   [36, 35],
@@ -83,3 +83,7 @@ export const LO_CLICK_PITCH = 89;
 export const HI_CLICK_PITCH = 90;
 export const LO_CLICK_CLASS = 9;
 export const HI_CLICK_CLASS = 10;
+
+
+// Note length constants.
+export const MIN_NOTE_LENGTH = 1;

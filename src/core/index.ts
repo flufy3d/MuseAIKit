@@ -23,6 +23,7 @@ import * as logging from './logging';
 import * as melodies from './melodies';
 import * as performance from './performance';
 import * as sequences from './sequences';
+import * as visualizers from './visualizers';
 
 export {
   aux_inputs,
@@ -32,11 +33,12 @@ export {
   logging,
   melodies,
   performance,
-  sequences
+  sequences,
+  visualizers
 };
 
 export * from './metronome';
 export * from './midi_io';
 export * from './player';
 export * from './recorder';
-export * from './visualizer';
+export * from './visualizers';
