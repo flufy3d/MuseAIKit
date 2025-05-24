@@ -1,24 +1,7 @@
-/**
- * @license
- * Copyright 2018 Google Inc. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-import * as sr from 'staffrender';
+import * as jr from 'jianpurender';
 import { INoteSequence, NoteSequence } from '../../protobuf/index';
 import { BaseVisualizer } from './base_visualizer';
 import { VisualizerConfig, ScrollType } from './config';
-
 
 
 /**
@@ -35,45 +18,42 @@ import { VisualizerConfig, ScrollType } from './config';
  * @param scrollType Sets scrolling to follow scoreplaying in different ways
  * according to `ScrollType` enum values.
  */
-export interface StaffSVGVisualizerConfig extends VisualizerConfig {
+export interface jianpuSVGVisualizerConfig extends VisualizerConfig {
   defaultKey?: number;
   instruments?: number[];
   scrollType?: ScrollType;
 }
 
 /**
- * Displays a `NoteSecuence` as a staff on a given SVG. Staff is scaled to fit
+ * Displays a `NoteSecuence` as a jianpu on a given SVG. jianpu is scaled to fit
  * vertically `config.noteHeight` and note horizontal position can behave in
  * two different ways: If `config.pixelsPerTimeStep` is greater than zero,
  * horizontal position will be proportional to its starting time, allowing to
  * pile several instances for different voices (parts). Otherwise, resulting
- * staff will display notes in a compact form, using minimum horizontal space
- * between musical symbols as regular paper staff does.
+ * jianpu will display notes in a compact form, using minimum horizontal space
+ * between musical symbols as regular paper jianpu does.
  *
  * Clef, key and time signature will be displayed at the leftmost side and the
- * rest of the staff will scroll under this initial signature area
+ * rest of the jianpu will scroll under this initial signature area
  * accordingly. In case of proportional note positioning, given it starts at
  * pixel zero, the signature area will blink meanwhile it collides with
  * initial active notes. Key and time signature changes will be shown
  * accordingly through score.
  *
  * New configuration features have been introduced through
- * `StaffSVGVisualizerConfig` over basic `VisualizerConfig`.
+ * `jianpuSVGVisualizerConfig` over basic `VisualizerConfig`.
  *
  * When connected to a player, the visualizer can also highlight
  * the notes being currently played.
  *
- * You can find more info at:
- *
- * https://github.com/rogerpasky/staffrender-magentaviewer
  */
-export class StaffSVGVisualizer extends BaseVisualizer {
-  private render: sr.StaffSVGRender;  // The actual render.
+export class JianpuSVGVisualizer extends BaseVisualizer {
+  private render: jr.JianpuSVGRender;  // The actual render.
   private instruments: number[];      // Instruments filter to be rendered.
   private drawnNotes: number;  // Number of drawn notes. Will redraw if changed.
 
   /**
-   * `StaffSVGVisualizer` constructor.
+   * `jianpuSVGVisualizer` constructor.
    *
    * @param sequence The `NoteSequence` to be visualized.
    * @param div The element where the visualization should be displayed.
@@ -81,7 +61,7 @@ export class StaffSVGVisualizer extends BaseVisualizer {
    */
   constructor(
     sequence: INoteSequence, div: HTMLDivElement,
-    config: StaffSVGVisualizerConfig = {}) {
+    config: jianpuSVGVisualizerConfig = {}) {
     super(sequence, config);
     if (  // Overwritting super() value. Compact visualization as default.
       config.pixelsPerTimeStep === undefined ||
@@ -89,13 +69,13 @@ export class StaffSVGVisualizer extends BaseVisualizer {
       this.config.pixelsPerTimeStep = 0;
     }
     this.instruments = config.instruments || [];
-    this.render = new sr.StaffSVGRender(
-      this.getScoreInfo(sequence), {
+    this.render = new jr.JianpuSVGRender(
+      this.getJianpuInfo(sequence), {
       noteHeight: this.config.noteHeight,
-      noteSpacing: this.config.noteSpacing,
+      noteSpacingFactor: this.config.noteSpacing,
       pixelsPerTimeStep: this.config.pixelsPerTimeStep,
-      noteRGB: this.config.noteRGB,
-      activeNoteRGB: this.config.activeNoteRGB,
+      noteColor: this.config.noteRGB,
+      activeNoteColor: this.config.activeNoteRGB,
       defaultKey: config.defaultKey || 0,
       scrollType: config.scrollType || ScrollType.PAGE,
     },
@@ -113,7 +93,7 @@ export class StaffSVGVisualizer extends BaseVisualizer {
   }
 
   /**
-   * Redraws the entire `noteSequence` in a staff if no `activeNote` is given,
+   * Redraws the entire `noteSequence` in a jianpu if no `activeNote` is given,
    * highlighting on and off the appropriate notes otherwise. Should the
    * `noteSequence` had changed adding more notes at the end, calling this
    * method again would complete the redrawing from the very last note it was
@@ -140,8 +120,8 @@ export class StaffSVGVisualizer extends BaseVisualizer {
   public redraw(activeNote?: NoteSequence.INote, scrollIntoView?: boolean):
     number {
     if (this.drawnNotes !== this.noteSequence.notes.length) {
-      this.render.scoreInfo = this.getScoreInfo(this.noteSequence);
-      this.drawnNotes = this.noteSequence.notes.length; // Update drawnNotes after updating scoreInfo
+      this.render.jianpuInfo = this.getJianpuInfo(this.noteSequence);
+      this.drawnNotes = this.noteSequence.notes.length; // Update drawnNotes after updating JianpuInfo
     }
     const activeNoteInfo =
       activeNote ? this.getNoteInfo(activeNote) : undefined;
@@ -164,7 +144,7 @@ export class StaffSVGVisualizer extends BaseVisualizer {
     return Math.round(q * 16) / 16;  // Current resolution = 1/16 quarter.
   }
 
-  private getNoteInfo(note: NoteSequence.INote): sr.NoteInfo {
+  private getNoteInfo(note: NoteSequence.INote): jr.NoteInfo {
     const startQ = this.timeToQuarters(note.startTime);
     const endQ = this.timeToQuarters(note.endTime);
     return {
@@ -175,8 +155,8 @@ export class StaffSVGVisualizer extends BaseVisualizer {
     };
   }
 
-  private getScoreInfo(sequence: INoteSequence): sr.ScoreInfo {
-    const notesInfo: sr.NoteInfo[] = [];
+  private getJianpuInfo(sequence: INoteSequence): jr.JianpuInfo {
+    const notesInfo: jr.NoteInfo[] = [];
     sequence.notes.forEach((note: NoteSequence.INote) => {
       if (this.isNoteInInstruments(note)) {
         notesInfo.push(this.getNoteInfo(note));

@@ -26,3 +26,4 @@ export * from './base_svg_visualizer';
 export * from './piano_roll_svg_visualizer';
 export * from './waterfall_visualizer';
 export * from './staff_visualizer';
+export * from './jianpu_visualizer';

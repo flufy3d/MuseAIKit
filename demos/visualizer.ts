@@ -16,27 +16,27 @@
  */
 
 import * as mm from '../src/index';
-import {blobToNoteSequence, urlToNoteSequence} from '../src/index';
-import {FULL_TWINKLE_UNQUANTIZED} from './common';
+import { blobToNoteSequence, urlToNoteSequence } from '../src/index';
+import { FULL_TWINKLE_UNQUANTIZED } from './common';
 
 const MIDI_URL = './melody.mid';
 let visualizers: mm.BaseVisualizer[] = [];
 let currentSequence: mm.INoteSequence = null;
 
 const player = new mm.SoundFontPlayer(
-    'https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus',
-    mm.Player.tone.Master, null, null, {
-      run: (note: mm.NoteSequence.Note) => {
-        for (let i = 0; i < visualizers.length; i++) {
-          visualizers[i].redraw(note, true);
-        }
-      },
-      stop: () => {
-        for (let i = 0; i < visualizers.length; i++) {
-          visualizers[i].clearActiveNotes();
-        }
-      }
-    });
+  'https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus',
+  mm.Player.tone.Master, null, null, {
+  run: (note: mm.NoteSequence.Note) => {
+    for (let i = 0; i < visualizers.length; i++) {
+      visualizers[i].redraw(note, true);
+    }
+  },
+  stop: () => {
+    for (let i = 0; i < visualizers.length; i++) {
+      visualizers[i].clearActiveNotes();
+    }
+  }
+});
 
 // UI elements
 const playBtn = document.getElementById('playBtn') as HTMLButtonElement;
@@ -50,8 +50,9 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const svg = document.getElementsByTagName('svg')[0] as SVGSVGElement;
 const waterfall = document.querySelector('#waterfall') as HTMLDivElement;
 const staff = document.getElementById('staff') as HTMLDivElement;
+const jianpu = document.getElementById('jianpu') as HTMLDivElement;
 const waterfallCheckbox =
-    document.getElementById('waterfallCheckbox') as HTMLInputElement;
+  document.getElementById('waterfallCheckbox') as HTMLInputElement;
 const styleInput = document.getElementById('styleInput') as HTMLTextAreaElement;
 const applyStyleBtn = document.getElementById('applyStyleBtn') as HTMLButtonElement;
 const customStyle = document.getElementById('customStyle') as HTMLStyleElement;
@@ -72,8 +73,8 @@ waterfallCheckbox.addEventListener('change', () => {
     return;
   } else {
     visualizers[2] = new mm.WaterfallSVGVisualizer(
-        currentSequence, waterfall,
-        {showOnlyOctavesUsed: waterfallCheckbox.checked});
+      currentSequence, waterfall,
+      { showOnlyOctavesUsed: waterfallCheckbox.checked });
   }
 });
 seqVelBtn.addEventListener('click', () => {
@@ -95,7 +96,7 @@ function fetchMidi(url: string) {
 // tslint:disable-next-line:no-any
 function loadFile(e: any) {
   blobToNoteSequence(e.target.files[0])
-      .then((seq) => initPlayerAndVisualizer(seq));
+    .then((seq) => initPlayerAndVisualizer(seq));
 }
 
 async function initPlayerAndVisualizer(seq: mm.INoteSequence) {
@@ -106,8 +107,9 @@ async function initPlayerAndVisualizer(seq: mm.INoteSequence) {
   visualizers = [
     new mm.PianoRollSVGVisualizer(seq, svg),
     new mm.StaffSVGVisualizer(seq, staff),
+    new mm.JianpuSVGVisualizer(seq, jianpu),
     new mm.WaterfallSVGVisualizer(
-        seq, waterfall, {showOnlyOctavesUsed: waterfallCheckbox.checked}),
+      seq, waterfall, { showOnlyOctavesUsed: waterfallCheckbox.checked }),
     new mm.PianoRollCanvasVisualizer(seq, canvas),
   ];
   currentSequence = seq;

@@ -46,3 +46,14 @@ export interface VisualizerConfig {
  */
 export type DataAttribute = [string, any]; // tslint:disable-line:no-any
 export type CSSProperty = [string, string | null];
+
+/**
+ * Enumeration of different ways of horizontal score scrolling, like paginated
+ * (PAGE is default value), note by note (NOTE) or in packed chunks by doing
+ * scroll just on bar starting (BAR).
+ */
+export enum ScrollType {
+  PAGE = 0,
+  NOTE = 1,
+  BAR = 2
+}

@@ -3961,6 +3961,13 @@ jest-worker@^27.4.5:
     merge-stream "^2.0.0"
     supports-color "^8.0.0"
 
+jianpurender@^1.1.9:
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/jianpurender/-/jianpurender-1.1.9.tgz#f45974a9439cc37f0d58e88d6ecb2cda181b4b8b"
+  integrity sha512-DvWziU7OybquISSBx4NXlXnNfv9EffiYqMRRjQ3iHeVkL4IL9hof4DCogPrIefreq+2wC0Ezx0FpTxyki3219Q==
+  dependencies:
+    path-browserify "^1.0.1"
+
 jquery@^3.4.1:
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.5.1.tgz#d7b4d08e1bfdb86ad2f1a3d039ea17304717abb5"
