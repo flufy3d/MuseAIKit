@@ -71,7 +71,7 @@ export class JianpuSVGVisualizer extends BaseVisualizer {
     this.instruments = config.instruments || [];
     this.render = new jr.JianpuSVGRender(
       this.getJianpuInfo(sequence), {
-      noteHeight: this.config.noteHeight,
+      noteHeight: this.config.noteHeight * 3.5,
       noteSpacingFactor: this.config.noteSpacing,
       pixelsPerTimeStep: this.config.pixelsPerTimeStep,
       noteColor: this.config.noteRGB,

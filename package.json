@@ -12,7 +12,7 @@
     "@tensorflow/tfjs-backend-webgl": "^2.7.0",
     "@tonejs/midi": "^2.0.15",
     "fft.js": "^4.0.3",
-    "jianpurender": "^1.1.9",
+    "jianpurender": "^1.2.0",
     "ndarray-resample": "^1.0.1",
     "path-browserify": "^1.0.1",
     "protobufjs": "^6.8.6",
