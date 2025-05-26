@@ -1,9 +1,15 @@
 # MuseAIKit
 
-MuseAIKit is a powerful music - focused library extracted from the magenta - js project. It serves as a foundational toolkit for music development, leveraging artificial intelligence to offer a wide range of capabilities.
+# MuseAIKit
 
-## Project Origin
-This project is derived from the `magenta/music` repository. We extracted the music - related components and extended them to create a more feature - rich and customizable music library. By building on top of `magenta/music`, we benefit from its existing models, data handling utilities, and overall architecture.
+[![npm version](https://badge.fury.io/js/museaikit.svg)](https://www.npmjs.com/package/museaikit)
+
+MuseAIKit is a standalone music AI toolkit with enhanced features and improved performance. Originally derived from @magenta/music, it has evolved into a comprehensive solution for music generation and analysis.
+
+## Key Features
+- **Enhanced Visualization**: Added jianpurender support for music notation visualization
+- **Improved MIDI Processing**: Optimized MIDI cleaning algorithms with dynamic parameter adjustment
+- **New Utilities**: Added note sequence utilities for advanced music manipulation
 
 
 ## Key Features
@@ -11,9 +17,25 @@ This project is derived from the `magenta/music` repository. We extracted the mu
 - **MIDI Manipulation**: Provides comprehensive functions for MIDI file conversion, including converting MIDI to NoteSequence and vice versa, facilitating seamless integration with MIDI - based music systems.
 - **Recording and Playback**: Supports MIDI recording from connected instruments and MIDI output for playback, allowing for real - time music interaction.
 
-## Future Expansion Plans
-- **Visualization Enhancement**: We plan to add features for rendering sheet music, providing users with a more intuitive way to view and analyze music.
-- **MIDI Repair and Optimization**: Future updates will focus on improving MIDI files, fixing errors, and optimizing the overall quality of MIDI - based music.
+## Recent Updates
+- Added adaptive quantization for MIDI cleaning
+- Implemented dynamic resolution adjustment for MIDI processing
+- Optimized note sequence utilities for better performance
+- Updated dependencies for improved stability
+
+## Installation
+```bash
+npm install museaikit
+```
+
+## Usage
+```javascript
+import { Player, Visualizer } from 'museaikit';
+
+// Initialize components
+const player = new Player();
+const visualizer = new Visualizer({ renderer: 'jianpurender' });
+```
 
 Join us in exploring the endless possibilities of music creation with MuseAIKit!
 
