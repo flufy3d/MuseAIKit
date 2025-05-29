@@ -24,6 +24,7 @@ import * as melodies from './melodies';
 import * as performance from './performance';
 import * as sequences from './sequences';
 import * as visualizers from './visualizers';
+import * as sequence_utils from './note_sequence_utils';
 
 export {
   aux_inputs,
@@ -34,7 +35,8 @@ export {
   melodies,
   performance,
   sequences,
-  visualizers
+  visualizers,
+  sequence_utils
 };
 
 export * from './metronome';
@@ -42,3 +44,4 @@ export * from './midi_io';
 export * from './player';
 export * from './recorder';
 export * from './visualizers';
+export * from './note_sequence_utils';
