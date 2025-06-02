@@ -17,13 +17,13 @@
  */
 import * as tf from '@tensorflow/tfjs';
 //@ts-ignore
-import * as FFT from 'fft.js';
+import FFTModule from 'fft.js';
 
-import {applyWindow, hannWindow, padCenterToLength} from '../core/audio_utils';
+import { applyWindow, hannWindow, padCenterToLength } from '../core/audio_utils';
 
 // tslint:disable-next-line:max-line-length
-import {MAG_DESCALE_A, MAG_DESCALE_B, N_FFT, N_HOP, PHASE_DESCALE_A, PHASE_DESCALE_B, SAMPLE_LENGTH, SAMPLE_RATE} from './constants';
-import {MEL_SPARSE_COEFFS} from './mel_sparse_coeffs';
+import { MAG_DESCALE_A, MAG_DESCALE_B, N_FFT, N_HOP, PHASE_DESCALE_A, PHASE_DESCALE_B, SAMPLE_LENGTH, SAMPLE_RATE } from './constants';
+import { MEL_SPARSE_COEFFS } from './mel_sparse_coeffs';
 
 export function melToLinearMatrix() {
   const m2l = tf.buffer([1024, 1024]);
@@ -74,7 +74,7 @@ function interleaveReIm(real: tf.Tensor, imag: tf.Tensor) {
     // Hack to interleave [re0, im0, re1, im1, ...] with batchToSpace.
     const crops = [[0, 0], [0, 0]];
     const reImInterleave =
-        tf.batchToSpaceND(reImBatch, [1, 2], crops).reshape([128, 4096]);
+      tf.batchToSpaceND(reImBatch, [1, 2], crops).reshape([128, 4096]);
     // Convert Tensor to a Float32Array[]
     return reImInterleave;
   });
@@ -120,8 +120,8 @@ export async function specgramsToAudio(specgrams: tf.Tensor4D) {
     const mag = melToLinear(magMel);
 
     const ifreqSlice = tf.slice(specgrams, [0, 0, 0, 1], [
-                           1, -1, -1, 1
-                         ]).reshape([1, 128, 1024]);
+      1, -1, -1, 1
+    ]).reshape([1, 128, 1024]);
     const ifreq = ifreqSlice as tf.Tensor3D;
     const phase = ifreqToPhase(ifreq);
 
@@ -152,7 +152,7 @@ export async function specgramsToAudio(specgrams: tf.Tensor4D) {
 export function ifft(reIm: Float32Array): Float32Array {
   // Interleave.
   const nFFT = reIm.length / 2;
-  const fft = new FFT(nFFT);
+  const fft = new FFTModule(nFFT);
   const recon = fft.createComplexArray();
   fft.inverseTransform(recon, reIm);
   // Just take the real part.
@@ -161,7 +161,7 @@ export function ifft(reIm: Float32Array): Float32Array {
 }
 
 export function istft(
-    reIm: Float32Array[], params: InverseSpecParams): Float32Array {
+  reIm: Float32Array[], params: InverseSpecParams): Float32Array {
   const nFrames = reIm.length;
   const nReIm = reIm[0].length;
   const nFft = (nReIm / 2);
@@ -210,7 +210,7 @@ export function istft(
 function add(arr0: Float32Array, arr1: Float32Array) {
   if (arr0.length !== arr1.length) {
     console.error(
-        `Array lengths must be equal to add: ${arr0.length}, ${arr0.length}`);
+      `Array lengths must be equal to add: ${arr0.length}, ${arr0.length}`);
     return null;
   }
 
